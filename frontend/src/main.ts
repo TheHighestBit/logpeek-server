@@ -12,6 +12,7 @@ import App from './App.vue'
 
 // Composables
 import { createApp } from 'vue'
+import "vue-data-ui/style.css";
 
 const app = createApp(App)
 
