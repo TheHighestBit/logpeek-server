@@ -1,13 +1,13 @@
 use axum::{Router, routing::{get, post}};
-use hello_world::hello_world;
+use index_handler::index_handler;
 
-use self::mirror_json::mirror_json;
+use self::index_handler::static_handler;
 
-mod hello_world;
+mod index_handler;
 mod mirror_json;
 
 pub fn router_setup() -> Router {
     Router::new()
-        .route("/", get(hello_world))
-        .route("/mirror_json", post(mirror_json))
+        .route("/", get(index_handler))
+        .route("/assets/*file", get(static_handler))
 }
