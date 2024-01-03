@@ -13,7 +13,6 @@ import {
   type VueUiSparklineConfig,
   type VueUiSparklineDatasetItem,
 } from "vue-data-ui";
-import { colors } from "@/styles/colors";
 
 const props = defineProps({
   bar_color: String,
@@ -54,7 +53,7 @@ const config = ref<VueUiSparklineConfig>({
   },
 });
 
-const dataset = ref([
+const dataset = ref<VueUiSparklineDatasetItem[]>([
   { period: "21:37", value: 4 },
   { period: "22:37", value: 77 },
   { period: "23:37", value: 61 },

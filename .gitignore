@@ -1,3 +1,4 @@
 backend/target
 backend/src/dist
+backend/logs
 Cargo.lock

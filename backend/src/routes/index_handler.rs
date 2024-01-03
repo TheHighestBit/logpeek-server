@@ -3,12 +3,12 @@ use log::{trace, info};
 use rust_embed::RustEmbed;
 
 pub async fn index_handler() -> impl IntoResponse {
-    trace!("Index page requested");
+    trace!("Request received");
     static_handler("/index.html".parse::<Uri>().unwrap()).await
 }
 
 pub async fn static_handler(uri: Uri) -> impl IntoResponse {
-    trace!("Static file requested: {}", uri.path());
+    trace!("Requested: {}", uri.path());
     let mut path = uri.path().trim_start_matches('/').to_string();
     if path.starts_with("dist/") {
         path = path.replace("dist/", "");
@@ -29,7 +29,6 @@ where
 {
   fn into_response(self) -> Response {
     let path = self.0.into();
-    //info!("Serving static file: {}", path);
 
     match Asset::get(path.as_str()) {
       Some(content) => {
