@@ -1,10 +1,11 @@
 TODO:
- - Set up frontend proxy to backend for dev
+ - Create snackbar for displaying errors/messages
  - Create logic for reading in and processing the log files
- - Create API endpoint for log entries
- - Create API endpoint for dashboard
+ - Create API endpoint for log entries using infinite scroll
+ - Add support for filtering by a list of log levels + other filters
+ - Add cache to the server, for entry table use positions in the array to indicate where to search next. Invalidate cache if new log entries are added
  - Respond from the API with the correct response codes
- - Add config via vargs
- - Clean up the async handling of in the frontend
+ - Add config via vargs/config file
+ - Clean up the async handling in the frontend
  - Add login/auth
  - Add support for HTTPS via self-signed certs

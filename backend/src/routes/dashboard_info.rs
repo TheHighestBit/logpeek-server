@@ -7,7 +7,6 @@ use serde::Serialize;
 use tokio::sync::RwLock;
 
 use crate::LogEntry;
-use crate::LogLevel;
 
 #[derive(Serialize)]
 pub struct DashboardResponse {
@@ -29,8 +28,8 @@ pub async fn dashboard_info_handler(Extension(log_buffer): Extension<Arc<RwLock<
     for entry in log_array.iter().rev().take_while(|entry| entry.timestamp > current_time - time::Duration::hours(24)) {
         let hour: usize = (current_time - entry.timestamp).whole_hours() as usize;
         match entry.level {
-            LogLevel::Error => error_logs[hour] += 1,
-            LogLevel::Warn => warning_logs[hour] += 1,
+            log::Level::Error => error_logs[hour] += 1,
+            log::Level::Warn => warning_logs[hour] += 1,
             _ => {}
         }
 

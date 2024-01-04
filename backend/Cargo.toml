@@ -9,7 +9,7 @@ edition = "2021"
 anyhow = "1.0.79"
 axum = "0.7.3"
 lazy_static = "1.4.0"
-log = "0.4.20"
+log = { version = "0.4.20", features = ["serde"] }
 logpeek = { path = "/home/fent/logpeek" }
 mime_guess = "2.0.4"
 regex = "1.10.2"
@@ -17,6 +17,6 @@ ringbuffer = "0.15.0"
 rust-embed = "8.2.0"
 serde = { version = "1.0.193", features = ["derive"] }
 thiserror = "1.0.56"
-time = { version = "0.3.31", features = ["parsing"] }
+time = { version = "0.3.31", features = ["parsing", "serde"] }
 tokio = { version = "1.35.1", features = ["macros", "rt-multi-thread"] }
 tower-http = { version = "0.5.0", features = ["cors", "add-extension"] }

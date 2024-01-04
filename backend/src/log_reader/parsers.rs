@@ -1,25 +1,12 @@
+use std::str::FromStr;
+
 use regex::Regex;
 use anyhow::Result;
 use thiserror::Error;
 use lazy_static::lazy_static;
 use time::OffsetDateTime;
 use time::format_description::well_known::Iso8601;
-use crate::LogLevel;
 use crate::LogEntry;
-
-impl LogLevel {
-    pub fn from_str(level: &str) -> Result<LogLevel> {
-        match level {
-            "TRACE" => Ok(LogLevel::Trace),
-            "DEBUG" => Ok(LogLevel::Debug),
-            "INFO" => Ok(LogLevel::Info),
-            "WARN" => Ok(LogLevel::Warn),
-            "ERROR" => Ok(LogLevel::Error),
-            _ => Err(LogParseError::InvalidLogLevel(level.to_string()).into()),
-        }
-    }
-
-}
 
 #[derive(Debug, Error)]
 pub enum LogParseError {
@@ -46,7 +33,7 @@ pub fn parse_logpeek(line: &str) -> Result<LogEntry> {
 
         Ok(LogEntry {
             timestamp: OffsetDateTime::parse(timestamp, &Iso8601::DEFAULT)?,
-            level: LogLevel::from_str(level)?,
+            level: log::Level::from_str(level)?,
             module: module.to_string(),
             message: message.to_string(),
         })

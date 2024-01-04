@@ -2,25 +2,18 @@ mod routes;
 mod log_reader;
 
 use ringbuffer::RingBuffer;
+use serde::Serialize;
 use std::sync::Arc;
 use time::OffsetDateTime;
 use axum::Router;
 use log::info;
 use routes::router_setup;
 
-#[derive(Debug)]
-enum LogLevel {
-    Trace,
-    Debug,
-    Info,
-    Warn,
-    Error,
-}
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Clone)]
 struct LogEntry {
     timestamp: OffsetDateTime,
-    level: LogLevel,
+    level: log::Level,
     module: String,
     message: String,
 }
