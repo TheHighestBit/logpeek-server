@@ -1,7 +1,9 @@
 <template>
   <v-main>
     <Menu />
-    <router-view />
+    <Suspense>
+      <router-view />
+    </Suspense>
   </v-main>
 </template>
 

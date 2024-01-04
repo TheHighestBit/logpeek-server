@@ -7,6 +7,8 @@
 </template>
 
 <script lang="ts" setup>
+import { computed } from "vue";
+import { PropType } from "vue";
 import { ref } from "vue";
 import { VueUiSparkline } from "vue-data-ui";
 import {
@@ -17,6 +19,7 @@ import {
 const props = defineProps({
   bar_color: String,
   sparkbar_title: String,
+  data: Array as PropType<number[]>,
 });
 
 const config = ref<VueUiSparklineConfig>({
@@ -53,31 +56,22 @@ const config = ref<VueUiSparklineConfig>({
   },
 });
 
-const dataset = ref<VueUiSparklineDatasetItem[]>([
-  { period: "21:37", value: 4 },
-  { period: "22:37", value: 77 },
-  { period: "23:37", value: 61 },
-  { period: "00:37", value: 97 },
-  { period: "01:37", value: 47 },
-  { period: "02:37", value: 83 },
-  { period: "03:37", value: 5 },
-  { period: "04:37", value: 57 },
-  { period: "05:37", value: 55 },
-  { period: "06:37", value: 77 },
-  { period: "07:37", value: 71 },
-  { period: "08:37", value: 97 },
-  { period: "09:37", value: 8 },
-  { period: "10:37", value: 100 },
-  { period: "11:37", value: 65 },
-  { period: "12:37", value: 50 },
-  { period: "13:37", value: 36 },
-  { period: "14:37", value: 37 },
-  { period: "15:37", value: 71 },
-  { period: "16:37", value: 28 },
-  { period: "17:37", value: 82 },
-  { period: "18:37", value: 40 },
-  { period: "19:37", value: 67 },
-  { period: "20:37", value: 6 }
-]);
+const dataset = computed(() => {
+  if (props.data) {
+    const dataset: VueUiSparklineDatasetItem[] = [];
+    const currentData = new Date();
+    const currentHour = currentData.getHours();
+    const currentMinute = currentData.getMinutes();
 
+    for (let i = props.data.length - 1; i >= 0; i--) {
+      dataset.push({
+        period: `${i + 1} hours ago, ${(currentHour - i - 1 + 24) % 24}:${currentMinute} - ${(currentHour - i + 24) % 24}:${currentMinute}`,
+        value: props.data[i],
+      });
+    }
+    return dataset;
+    }
+
+  return [];
+});
 </script>

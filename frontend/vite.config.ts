@@ -39,6 +39,9 @@ export default defineConfig({
     extensions: ['.js', '.json', '.jsx', '.mjs', '.ts', '.tsx', '.vue'],
   },
   server: {
+    proxy: {
+      '/api': 'http://0.0.0.0:3000'
+    },
     port: 3000,
   },
   build: {

@@ -1,7 +1,6 @@
 mod routes;
 mod log_reader;
 
-use lazy_static::lazy_static;
 use ringbuffer::RingBuffer;
 use std::sync::Arc;
 use time::OffsetDateTime;

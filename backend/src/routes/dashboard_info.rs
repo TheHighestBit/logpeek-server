@@ -41,6 +41,6 @@ pub async fn dashboard_info_handler(Extension(log_buffer): Extension<Arc<RwLock<
         total_logs,
         error_logs,
         warning_logs,
-        log_buffer_usage: log_array.len() as f32 / log_array.capacity() as f32,
+        log_buffer_usage: 42.0, //log_array.len() as f32 / log_array.capacity() as f32
     })
 }
