@@ -1,5 +1,5 @@
 use axum::{response::{IntoResponse, Response}, http::{Uri, header, StatusCode}};
-use log::{trace, info};
+use log::trace;
 use rust_embed::RustEmbed;
 
 pub async fn index_handler() -> impl IntoResponse {

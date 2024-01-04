@@ -1,8 +1,10 @@
 mod routes;
 mod log_reader;
 
+use lazy_static::lazy_static;
+use ringbuffer::RingBuffer;
 use std::sync::Arc;
-
+use time::OffsetDateTime;
 use axum::Router;
 use log::info;
 use routes::router_setup;
@@ -18,7 +20,7 @@ enum LogLevel {
 
 #[derive(Debug)]
 struct LogEntry {
-    timestamp: String,
+    timestamp: OffsetDateTime,
     level: LogLevel,
     module: String,
     message: String,
@@ -35,6 +37,6 @@ pub async fn run() {
     let app: Router = router_setup(Arc::clone(&log_entries));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    info!("Listening on {}", listener.local_addr().unwrap());
+    info!("Listening on http://0.0.0.0:3000");
     axum::serve(listener, app).await.unwrap();
 }

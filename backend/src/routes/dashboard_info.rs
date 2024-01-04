@@ -1,38 +1,46 @@
 use std::sync::Arc;
-
 use axum::{Extension, Json};
 use log::trace;
+use ringbuffer::AllocRingBuffer;
+use ringbuffer::RingBuffer;
 use serde::Serialize;
 use tokio::sync::RwLock;
 
 use crate::LogEntry;
+use crate::LogLevel;
 
 #[derive(Serialize)]
-pub struct DashboardInfo {
-    total_count: u32,
-    error_count: u32,
-    warning_count: u32,
+pub struct DashboardResponse {
+    total_logs: [u32; 24],
+    error_logs: [u32; 24],
+    warning_logs: [u32; 24],
+    log_buffer_usage: f32,
 }
 
-pub async fn dashboard_info_handler(Extension(log_array): Extension<Arc<RwLock<Vec<LogEntry>>>>) -> Json<DashboardInfo> {
+pub async fn dashboard_info_handler(Extension(log_buffer): Extension<Arc<RwLock<AllocRingBuffer<LogEntry>>>>) -> Json<DashboardResponse> {
     trace!("Request received");
     
-    let log_array = log_array.read().await;
-    let total_count = log_array.len() as u32;
-    let mut error_count = 0;
-    let mut warning_count = 0;
+    let log_array = log_buffer.read().await;
+    let current_time = time::OffsetDateTime::now_utc();
+    let mut total_logs: [u32; 24] = [0; 24];
+    let mut error_logs: [u32; 24] = [0; 24];
+    let mut warning_logs: [u32; 24] = [0; 24];
 
-    for entry in log_array.iter() {
+    for entry in log_array.iter().rev().take_while(|entry| entry.timestamp > current_time - time::Duration::hours(24)) {
+        let hour: usize = (current_time - entry.timestamp).whole_hours() as usize;
         match entry.level {
-            crate::LogLevel::Error => error_count += 1,
-            crate::LogLevel::Warn => warning_count += 1,
+            LogLevel::Error => error_logs[hour] += 1,
+            LogLevel::Warn => warning_logs[hour] += 1,
             _ => {}
         }
+
+        total_logs[hour] += 1;
     }
 
-    Json(DashboardInfo {
-        total_count,
-        error_count,
-        warning_count,
+    Json(DashboardResponse {
+        total_logs,
+        error_logs,
+        warning_logs,
+        log_buffer_usage: log_array.len() as f32 / log_array.capacity() as f32,
     })
 }

@@ -12,6 +12,6 @@ async fn main() {
         ..Default::default() };
     init(config).unwrap();
 
-    info!("starting...");
+    info!("Starting...");
     run().await;
 }
