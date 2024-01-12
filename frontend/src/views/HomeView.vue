@@ -1,5 +1,5 @@
 <template>
-  <v-container class="fill-height">
+  <v-container fluid>
     <v-row>
       <v-col>
         <SmallSparkline :bar_color="colors.primary" :data="dashboard_info.total_logs" sparkbar_title="24h Log Entries"></SmallSparkline>

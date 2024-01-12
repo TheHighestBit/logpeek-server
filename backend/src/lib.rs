@@ -28,7 +28,7 @@ pub async fn run() {
 
     let app: Router = router_setup(Arc::clone(&log_entries));
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    info!("Listening on http://0.0.0.0:3000");
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3001").await.unwrap();
+    info!("Listening on http://0.0.0.0:3001");
     axum::serve(listener, app).await.unwrap();
 }

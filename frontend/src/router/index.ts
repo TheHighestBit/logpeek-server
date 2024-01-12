@@ -12,12 +12,12 @@ const routes = [
         // route level code-splitting
         // this generates a separate chunk (Home-[hash].js) for this route
         // which is lazy-loaded when the route is visited.
-        component: () => import('@/views/Home.vue'),
+        component: () => import('@/views/HomeView.vue'),
       },
       {
         path: '/table',
         name: 'LogTable',
-        component: () => import('@/views/LogTable.vue'),
+        component: () => import('@/views/LogTableView.vue'),
       }
     ],
   },

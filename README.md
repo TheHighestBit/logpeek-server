@@ -1,11 +1,13 @@
 TODO:
- - Create snackbar for displaying errors/messages
  - Create logic for reading in and processing the log files
- - Create API endpoint for log entries using infinite scroll
- - Add support for filtering by a list of log levels + other filters
+ - Create UI element for each log entry to be displayed in the table
+ - Add support for filtering with min log level + other filters
  - Add cache to the server, for entry table use positions in the array to indicate where to search next. Invalidate cache if new log entries are added
  - Respond from the API with the correct response codes
  - Add config via vargs/config file
  - Clean up the async handling in the frontend
  - Add login/auth
+ - Create snackbar for displaying errors/messages
  - Add support for HTTPS via self-signed certs
+ - Check that multiline log entries are handled correctly
+ - See if it's maybe possible to display system metrics on the dashboard, such as CPU usage, memory usage, etc.
