@@ -1,12 +1,13 @@
-use std::sync::Arc;
-use axum::{Extension, Json};
+
+use axum::{Json};
+use axum::extract::State;
 use log::trace;
-use ringbuffer::AllocRingBuffer;
+
 use ringbuffer::RingBuffer;
 use serde::Serialize;
-use tokio::sync::RwLock;
 
-use crate::LogEntry;
+
+use crate::{SharedState};
 
 #[derive(Serialize)]
 pub struct DashboardResponse {
@@ -16,10 +17,10 @@ pub struct DashboardResponse {
     log_buffer_usage: f32,
 }
 
-pub async fn dashboard_info_handler(Extension(log_buffer): Extension<Arc<RwLock<AllocRingBuffer<LogEntry>>>>) -> Json<DashboardResponse> {
+pub async fn dashboard_info_handler(State(shared_state): State<SharedState>) -> Json<DashboardResponse> {
     trace!("Request received");
     
-    let log_array = log_buffer.read().await;
+    let log_array = shared_state.log_buffer.read().await;
     let current_time = time::OffsetDateTime::now_utc();
     let mut total_logs: [u32; 24] = [0; 24];
     let mut error_logs: [u32; 24] = [0; 24];

@@ -1,15 +1,16 @@
-use std::{sync::Arc, str::FromStr, fmt};
+use std::{str::FromStr, fmt};
 
 use anyhow::Result;
 use log::{error, trace};
 use serde::{Deserialize, Deserializer, de};
-use axum::{Extension, extract::Query, Json};
+use axum::{extract::Query, Json};
+use axum::extract::State;
 use axum::http::StatusCode;
-use ringbuffer::{AllocRingBuffer, RingBuffer};
+use ringbuffer::{RingBuffer};
 use time::OffsetDateTime;
-use tokio::sync::RwLock;
 
-use crate::LogEntry;
+
+use crate::{LogEntry, SharedState};
 
 #[derive(Debug, Deserialize)]
 pub struct Params {
@@ -111,7 +112,7 @@ impl LogFilter {
     }
 }
 
-pub async fn log_table_handler(Query(params): Query<Params>, Extension(log_array): Extension<Arc<RwLock<AllocRingBuffer<LogEntry>>>>) -> (StatusCode, Json<Vec<LogEntry>>) {
+pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state): State<SharedState>) -> (StatusCode, Json<Vec<LogEntry>>) {
     trace!("Request received {:?}", params);
 
     let log_filter_result = LogFilter::new(&params);
@@ -122,7 +123,7 @@ pub async fn log_table_handler(Query(params): Query<Params>, Extension(log_array
 
     let log_filter = log_filter_result.unwrap(); // Safe to unwrap because we checked for errors above
 
-    let log_array = log_array.read().await;
+    let log_array = shared_state.log_buffer.read().await;
     let result = log_array.iter()
         .skip(log_filter.index)
         .filter(|entry| log_filter.matches(entry))

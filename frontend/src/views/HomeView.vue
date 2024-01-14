@@ -1,6 +1,9 @@
 <template>
   <v-container fluid>
     <v-row>
+      <SystemInfo></SystemInfo>
+    </v-row>
+    <v-row>
       <v-col>
         <SmallSparkline :bar_color="colors.primary" :data="dashboard_info.total_logs" sparkbar_title="24h Log Entries"></SmallSparkline>
         <SmallSparkline :bar_color="colors.log_error" :data="dashboard_info.error_logs" sparkbar_title="24h Errors"></SmallSparkline>
@@ -25,6 +28,7 @@ import {
   type VueUi3dBarDataset,
   VueUi3dBar,
 } from "vue-data-ui";
+import SystemInfo from "@/components/SystemInfo.vue";
 
 const dashboard_info: DashboardInfo = await fetch("/api/dashboard_info").then((res) => res.json());
 

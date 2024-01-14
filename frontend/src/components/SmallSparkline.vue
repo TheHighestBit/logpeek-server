@@ -65,7 +65,7 @@ const dataset = computed(() => {
 
     for (let i = props.data.length - 1; i >= 0; i--) {
       dataset.push({
-        period: `${i + 1} hours ago, ${(currentHour - i - 1 + 24) % 24}:${currentMinute} - ${(currentHour - i + 24) % 24}:${currentMinute}`,
+        period: `${i + 1} hours ago, ${(currentHour - i - 1 + 24) % 24}:${currentMinute} - ${(currentHour - i + 24) % 24}:${currentMinute} LOCAL`,
         value: props.data[i],
       });
     }

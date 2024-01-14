@@ -1,7 +1,6 @@
 TODO:
- - Create logic for reading in and processing the log files
  - Create UI element for each log entry to be displayed in the table
- - Add support for filtering with min log level + other filters
+ - Create logic for reading in and processing the log files
  - Add cache to the server, for entry table use positions in the array to indicate where to search next. Invalidate cache if new log entries are added
  - Respond from the API with the correct response codes
  - Add config via vargs/config file
@@ -10,4 +9,3 @@ TODO:
  - Create snackbar for displaying errors/messages
  - Add support for HTTPS via self-signed certs
  - Check that multiline log entries are handled correctly
- - See if it's maybe possible to display system metrics on the dashboard, such as CPU usage, memory usage, etc.
