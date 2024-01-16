@@ -21,9 +21,8 @@
     </v-row>
     <v-infinite-scroll :key="infinite_scroll_key" :items="items" :onLoad="load">
       <template v-for="(item, index) in items" :key="item">
-        <div :class="['pa-2', index % 2 === 0 ? 'bg-grey-lighten-2' : '']">
-          Item #{{ item }}
-        </div>
+        <LogTableElement :index="index + 1" :timestamp="timeArrayToString(item.timestamp)"
+        :level="item.level" :module_name="item.module" :message="item.message"></LogTableElement>
       </template>
     </v-infinite-scroll>
   </v-card>
@@ -31,10 +30,11 @@
 
 <script lang="ts" setup>
 import {onBeforeUnmount, onMounted, ref} from 'vue'
-import { LogEntry } from "@/interfaces/LogEntry";
+import LogTableElement from "@/components/LogTableElement.vue";
 import VueDatePicker from "@vuepic/vue-datepicker";
 import '@vuepic/vue-datepicker/dist/main.css';
-
+import {LogEntry} from "@/interfaces/LogEntry";
+import {timeArrayToString} from "@/utils";
 const items = ref<LogEntry[]>([]);
 
 const date_range_filter = ref<Date[]>([]);

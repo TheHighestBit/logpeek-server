@@ -1,7 +1,7 @@
 TODO:
  - Create UI element for each log entry to be displayed in the table
  - Create logic for reading in and processing the log files
- - Add cache to the server, for entry table use positions in the array to indicate where to search next. Invalidate cache if new log entries are added
+ - Create a table header for the log table
  - Respond from the API with the correct response codes
  - Add config via vargs/config file
  - Clean up the async handling in the frontend

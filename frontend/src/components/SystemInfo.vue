@@ -12,7 +12,7 @@
         <p class="text-overline mr-3">OS - {{ system_info.os }}</p>
 
         <v-icon size="large" icon="mdi-home-circle-outline"></v-icon>
-        <p class="text-overline mr-3">NAME - {{ system_info.host_name }}</p>
+        <p class="text-overline mr-3">HOST - {{ system_info.host_name }}</p>
 
         <v-icon size="large" icon="mdi-clock-time-eight-outline"></v-icon>
         <p class="text-overline">UPTIME - {{ system_info.uptime }}</p>

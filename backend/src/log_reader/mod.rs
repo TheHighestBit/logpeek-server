@@ -10,7 +10,7 @@ use crate::LogEntry;
 
 pub fn load_logs() -> Result<Arc<RwLock<AllocRingBuffer<LogEntry>>>> {
     let mut result = AllocRingBuffer::new(15_000_000);
-    let file = File::open("logs/test.log")?;
+    let file = File::open("logs/level_test.log")?;
     let reader = std::io::BufReader::new(file);
 
     for (i, line) in reader.lines().enumerate() {
