@@ -2,7 +2,7 @@ use std::{str::FromStr, fmt};
 
 use anyhow::Result;
 use log::{error, trace};
-use serde::{Deserialize, Deserializer, de};
+use serde::{Deserialize, Deserializer, de, Serialize};
 use axum::{extract::Query, Json};
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -14,7 +14,8 @@ use crate::{LogEntry, SharedState};
 
 #[derive(Debug, Deserialize)]
 pub struct Params {
-    index: usize,
+    page: usize,
+    items_per_page: usize,
     #[serde(default, deserialize_with = "empty_string_as_none")]
     min_log_level: Option<log::LevelFilter>,
     #[serde(default, deserialize_with = "empty_string_as_none")]
@@ -27,9 +28,16 @@ pub struct Params {
     end_timestamp: Option<String>,
 }
 
+#[derive(Debug, Serialize)]
+pub struct LogTableResponse {
+    pub total_items: usize,
+    pub logs: Vec<LogEntry>,
+}
+
 #[derive(Debug)]
 struct LogFilter {
     index: usize,
+    items_per_page: usize,
     min_log_level: Option<log::LevelFilter>,
     module_name: Option<regex::Regex>,
     message: Option<regex::Regex>,
@@ -40,7 +48,8 @@ struct LogFilter {
 impl LogFilter {
     fn new(params: &Params) -> Result<Self> {
         let Params {
-            index,
+            page,
+            items_per_page,
             min_log_level,
             module_name,
             message,
@@ -48,7 +57,7 @@ impl LogFilter {
             end_timestamp,
         } = params;
 
-        let index = *index;
+        let index = (*page - 1) * *items_per_page;
 
         let min_log_level = *min_log_level;
 
@@ -70,6 +79,7 @@ impl LogFilter {
 
         Ok(Self {
             index,
+            items_per_page: *items_per_page,
             min_log_level,
             module_name,
             message,
@@ -112,13 +122,18 @@ impl LogFilter {
     }
 }
 
-pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state): State<SharedState>) -> (StatusCode, Json<Vec<LogEntry>>) {
+pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state): State<SharedState>) -> (StatusCode, Json<LogTableResponse>) {
     trace!("Request received {:?}", params);
 
     let log_filter_result = LogFilter::new(&params);
     if let Err(err) = log_filter_result {
         error!("Error parsing log filter: {} with params: {:?}", err, params);
-        return (StatusCode::BAD_REQUEST, Json(vec![]));
+        return (StatusCode::BAD_REQUEST, Json({
+            LogTableResponse {
+                total_items: 0,
+                logs: vec![],
+            }
+        }));
     }
 
     let log_filter = log_filter_result.unwrap(); // Safe to unwrap because we checked for errors above
@@ -127,11 +142,16 @@ pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state)
     let result = log_array.iter()
         .skip(log_filter.index)
         .filter(|entry| log_filter.matches(entry))
-        .take(25)
+        .take(log_filter.items_per_page)
         .cloned()
         .collect::<Vec<LogEntry>>();
 
-    (StatusCode::OK, Json(result))
+    (StatusCode::OK, Json({
+        LogTableResponse {
+            total_items: log_array.len(),
+            logs: result,
+        }
+    }))
 }
 
 /// Serde deserialization decorator to map empty Strings to None,

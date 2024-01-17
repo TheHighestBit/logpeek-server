@@ -19,22 +19,40 @@
         <v-text-field v-model="module_filter" label="Module" density="compact"></v-text-field>
       </v-col>
     </v-row>
-    <v-infinite-scroll :key="infinite_scroll_key" :items="items" :onLoad="load">
-      <template v-for="(item, index) in items" :key="item">
-        <LogTableElement :index="index + 1" :timestamp="timeArrayToString(item.timestamp)"
-        :level="item.level" :module_name="item.module" :message="item.message"></LogTableElement>
+    <v-data-table-server
+      v-model:items-per-page="itemsPerPage"
+      :headers="headers"
+      :items-length="totalItems"
+      :items="items"
+      :loading="loading"
+      :items-per-page-options="[10, 25, 100, 500, 1000]"
+      @update:options="load"
+    >
+      <template v-slot:item="i">
+        <tr>
+          <td>{{ i.item.index }}</td>
+          <td>{{ i.item.timestamp_formatted }}</td>
+          <td v-if="i.item.level === 'ERROR'" style="color: #ff0335">{{ i.item.level }}</td>
+          <td v-else-if="i.item.level === 'WARN'" style="color: #FFC107">{{ i.item.level }}</td>
+          <td v-else-if="i.item.level === 'INFO'" style="color: #2ebb36">{{ i.item.level }}</td>
+          <td v-else-if="i.item.level === 'DEBUG'" style="color: #2196f3">{{ i.item.level }}</td>
+          <td v-else style="color: #8764a2">{{ i.item.level }}</td>
+          <td>{{ i.item.module }}</td>
+          <td>{{ i.item.message }}</td>
+        </tr>
       </template>
-    </v-infinite-scroll>
+    </v-data-table-server>
   </v-card>
 </template>
 
 <script lang="ts" setup>
 import {onBeforeUnmount, onMounted, ref} from 'vue'
-import LogTableElement from "@/components/LogTableElement.vue";
 import VueDatePicker from "@vuepic/vue-datepicker";
 import '@vuepic/vue-datepicker/dist/main.css';
 import {LogEntry} from "@/interfaces/LogEntry";
 import {timeArrayToString} from "@/utils";
+import {LogTableResponse} from "@/interfaces/LogTableResponse";
+
 const items = ref<LogEntry[]>([]);
 
 const date_range_filter = ref<Date[]>([]);
@@ -42,11 +60,19 @@ const min_log_level_filter = ref<string>();
 const message_filter = ref<string>();
 const module_filter = ref<string>();
 
-const infinite_scroll_key = ref(0);
+const itemsPerPage = ref(10);
+const totalItems = ref(0);
+const headers = ref([
+  { title: "Index", align: "start", key: "index", sortable: false},
+  { title: "Timestamp", align: "start", key: "timestamp_formatted", sortable: false },
+  { title: "Level", align: "start", key: "level", sortable: false },
+  { title: "Module", align: "start", key: "module", sortable: false },
+  { title: "Message", align: "start", key: "message", sortable: false }
+]);
+const loading = ref(true);
 
 const refresh_table = () => {
-  items.value = [];
-  infinite_scroll_key.value++; //Forces the component to rerender
+  load({ page: 1, itemsPerPage: itemsPerPage.value });
 };
 
 onMounted(() => {
@@ -63,9 +89,11 @@ const enter_pressed = (e: KeyboardEvent) => {
   }
 };
 
-const load = async ({ side, done }: { side: string, done: Function }) => {
+const load = async ({ page, itemsPerPage }: { page: number, itemsPerPage: number }) => {
+  loading.value = true;
   const search_params = new URLSearchParams({
-    index: items.value.length.toString()
+    page: page.toString(),
+    items_per_page: itemsPerPage.toString(),
   });
 
   if (date_range_filter.value.length > 0) {
@@ -85,16 +113,15 @@ const load = async ({ side, done }: { side: string, done: Function }) => {
     search_params.append("module_name", module_filter.value);
   }
 
-  const newItems: LogEntry[] = await fetch("/api/log_table?" + search_params).then((res) => res.json());
+  const response: LogTableResponse = await fetch("/api/log_table?" + search_params).then((res) => res.json());
+  response.logs.map((item: LogEntry) => {
+    item.timestamp_formatted = timeArrayToString(item.timestamp);
+    item.index = (page - 1) * itemsPerPage + response.logs.indexOf(item) + 1;
+  });
 
-  items.value = [...items.value, ...newItems];
-  console.log(side);
-
-  if (newItems.length < 25) { //25 are loaded at once
-    done('empty');
-  } else {
-    done('ok');
-  }
+  items.value = response.logs
+  totalItems.value = response.total_items;
+  loading.value = false;
 };
 
 </script>
