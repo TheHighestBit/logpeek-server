@@ -31,7 +31,7 @@
       <template v-slot:item="i">
         <tr>
           <td>{{ i.item.index }}</td>
-          <td>{{ i.item.timestamp_formatted }}</td>
+          <td>{{ i.item.timestamp }}</td>
           <td v-if="i.item.level === 'ERROR'" style="color: #ff0335">{{ i.item.level }}</td>
           <td v-else-if="i.item.level === 'WARN'" style="color: #FFC107">{{ i.item.level }}</td>
           <td v-else-if="i.item.level === 'INFO'" style="color: #2ebb36">{{ i.item.level }}</td>
@@ -115,7 +115,6 @@ const load = async ({ page, itemsPerPage }: { page: number, itemsPerPage: number
 
   const response: LogTableResponse = await fetch("/api/log_table?" + search_params).then((res) => res.json());
   response.logs.map((item: LogEntry) => {
-    item.timestamp_formatted = timeArrayToString(item.timestamp);
     item.index = (page - 1) * itemsPerPage + response.logs.indexOf(item) + 1;
   });
 

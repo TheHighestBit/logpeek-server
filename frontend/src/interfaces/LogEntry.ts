@@ -1,7 +1,6 @@
 export interface LogEntry {
   index: number;
-  timestamp: number[];
-  timestamp_formatted: string,
+  timestamp: string;
   level: string;
   module: string;
   message: string;

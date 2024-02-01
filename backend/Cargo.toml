@@ -8,11 +8,13 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.79"
 axum = "0.7.3"
+glob = "0.3.1"
 lazy_static = "1.4.0"
 log = { version = "0.4.20", features = ["serde"] }
 logpeek = { path = "C:/Users/joose/Desktop/logpeek" }
 mime_guess = "2.0.4"
 regex = "1.10.2"
+rev_lines = "0.3.0"
 ringbuffer = "0.15.0"
 rust-embed = "8.2.0"
 serde = { version = "1.0.193", features = ["derive"] }

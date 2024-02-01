@@ -126,32 +126,34 @@ pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state)
     trace!("Request received {:?}", params);
 
     let log_filter_result = LogFilter::new(&params);
-    if let Err(err) = log_filter_result {
-        error!("Error parsing log filter: {} with params: {:?}", err, params);
-        return (StatusCode::BAD_REQUEST, Json({
-            LogTableResponse {
-                total_items: 0,
-                logs: vec![],
-            }
-        }));
-    }
 
-    let log_filter = log_filter_result.unwrap(); // Safe to unwrap because we checked for errors above
+    match log_filter_result {
+        Ok(log_filter) => {
+            let log_array = shared_state.log_buffer.read().await;
+            let result = log_array.iter()
+                .skip(log_filter.index)
+                .filter(|entry| log_filter.matches(entry))
+                .take(log_filter.items_per_page)
+                .cloned()
+                .collect::<Vec<LogEntry>>();
 
-    let log_array = shared_state.log_buffer.read().await;
-    let result = log_array.iter()
-        .skip(log_filter.index)
-        .filter(|entry| log_filter.matches(entry))
-        .take(log_filter.items_per_page)
-        .cloned()
-        .collect::<Vec<LogEntry>>();
-
-    (StatusCode::OK, Json({
-        LogTableResponse {
-            total_items: log_array.len(),
-            logs: result,
+            (StatusCode::OK, Json({
+                LogTableResponse {
+                    total_items: log_array.len(),
+                    logs: result,
+                }
+            }))
+        },
+        Err(err) => {
+            error!("Error parsing log filter: {} with params: {:?}", err, params);
+            (StatusCode::BAD_REQUEST, Json({
+                LogTableResponse {
+                    total_items: 0,
+                    logs: vec![],
+                }
+            }))
         }
-    }))
+    }
 }
 
 /// Serde deserialization decorator to map empty Strings to None,

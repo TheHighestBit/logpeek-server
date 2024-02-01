@@ -1,6 +1,6 @@
 TODO:
- - Create UI element for each log entry to be displayed in the table
- - Create logic for reading in and processing the log files
+ - Create logic for reading in new log entries
+ - Finalize the timestamp filtering system
  - Create a table header for the log table
  - Respond from the API with the correct response codes
  - Add config via vargs/config file

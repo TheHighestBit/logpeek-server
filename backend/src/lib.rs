@@ -14,6 +14,7 @@ use routes::router_setup;
 
 #[derive(Debug, Serialize, Clone)]
 struct LogEntry {
+    #[serde(with = "time::serde::rfc3339")]
     timestamp: OffsetDateTime,
     level: log::Level,
     module: String,
