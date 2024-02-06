@@ -1,13 +1,24 @@
 <template>
   <v-card>
     <v-row>
-      <v-col cols="6">
-        <VueDatePicker v-model="date_range_filter" range utc time-picker-inline dark></VueDatePicker>
+      <v-col cols="7">
+        <VueDatePicker v-model="date_range_filter" range utc time-picker-inline dark :preset-dates="presetDates">
+          <template #preset-date-range-button="{ label, value, presetDate }">
+            <span
+              role="button"
+              :tabindex="0"
+              @click="presetDate(value)"
+              @keyup.enter.prevent="presetDate(value)"
+              @keyup.space.prevent="presetDate(value)">
+              {{ label }}
+            </span>
+          </template>
+        </VueDatePicker>
       </v-col>
-      <v-col>
+      <v-col cols="3">
         <v-select v-model="min_log_level_filter" clearable label="Min log level" :items="['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR']" density="compact"></v-select>
       </v-col>
-      <v-col>
+      <v-col cols="2">
         <v-btn class="mr-5" color="#6716bd" variant="elevated" :onclick="refresh_table">Refresh</v-btn>
       </v-col>
     </v-row>
@@ -50,8 +61,8 @@ import {onBeforeUnmount, onMounted, ref} from 'vue'
 import VueDatePicker from "@vuepic/vue-datepicker";
 import '@vuepic/vue-datepicker/dist/main.css';
 import {LogEntry} from "@/interfaces/LogEntry";
-import {timeArrayToString} from "@/utils";
 import {LogTableResponse} from "@/interfaces/LogTableResponse";
+import { endOfMonth, endOfYear, startOfMonth, startOfYear, subMonths, subDays } from 'date-fns';
 
 const items = ref<LogEntry[]>([]);
 
@@ -60,6 +71,7 @@ const min_log_level_filter = ref<string>();
 const message_filter = ref<string>();
 const module_filter = ref<string>();
 
+const loading = ref(true);
 const itemsPerPage = ref(10);
 const totalItems = ref(0);
 const headers = ref([
@@ -69,7 +81,17 @@ const headers = ref([
   { title: "Module", align: "start", key: "module", sortable: false },
   { title: "Message", align: "start", key: "message", sortable: false }
 ]);
-const loading = ref(true);
+const presetDates = ref([
+  { label: 'Last 24h', value: [subDays(new Date(), 1), new Date()] },
+  { label: 'Last 7 days', value: [subDays(new Date(), 7), new Date()] },
+  { label: 'Last 30 days', value: [subDays(new Date(), 30), new Date()]},
+  { label: 'This month', value: [startOfMonth(new Date()), endOfMonth(new Date())] },
+  {
+    label: 'Last month',
+    value: [startOfMonth(subMonths(new Date(), 1)), endOfMonth(subMonths(new Date(), 1))],
+  },
+  { label: 'This year', value: [startOfYear(new Date()), endOfYear(new Date())] },
+]);
 
 const refresh_table = () => {
   load({ page: 1, itemsPerPage: itemsPerPage.value });
@@ -96,9 +118,15 @@ const load = async ({ page, itemsPerPage }: { page: number, itemsPerPage: number
     items_per_page: itemsPerPage.toString(),
   });
 
-  if (date_range_filter.value.length > 0) {
-    search_params.append("start_timestamp", date_range_filter.value[0].toISOString());
-    search_params.append("end_timestamp", date_range_filter.value[1].toISOString());
+  if (date_range_filter.value !== null && date_range_filter.value.length > 0) {
+    //TODO show error if this is null
+    search_params.append("start_timestamp", date_range_filter.value[0].toString());
+
+    if (date_range_filter.value[1] !== null) {
+      search_params.append("end_timestamp", date_range_filter.value[1].toString());
+    } else {
+      search_params.append("end_timestamp", new Date().toISOString());
+    }
   }
 
   if (min_log_level_filter.value) {

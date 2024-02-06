@@ -2,7 +2,7 @@ mod parsers;
 
 use anyhow::Result;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
-use std::{fs::File, io::BufRead};
+use std::{fs::File};
 use std::fs::metadata;
 use log::error;
 use std::sync::Arc;
@@ -10,9 +10,10 @@ use glob::glob;
 use rev_lines::RevLines;
 use tokio::sync::RwLock;
 use crate::LogEntry;
+use crate::SETTINGS;
 
-pub fn load_logs() -> Result<Arc<RwLock<AllocRingBuffer<LogEntry>>>> {
-    let mut result = AllocRingBuffer::new(15_000_000);
+pub async fn load_logs() -> Result<Arc<RwLock<AllocRingBuffer<LogEntry>>>> {
+    let mut result = AllocRingBuffer::new(SETTINGS.read().await.get_int("main.buffer_size").unwrap_or(1_000_000) as usize);
     let mut log_files = Vec::new();
 
     // Current issue is that all log files need to be processed regardless of modified time

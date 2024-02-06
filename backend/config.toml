@@ -1,0 +1,7 @@
+[main]
+buffer_size = 1_000_000 # The size of the log buffer that is kept in memory. When the buffer is full, the oldest logs are discarded.
+
+[main.logger]
+debug = false # When true, sets the minimum log level to trace
+log_to_file = true # When true, logs will be written to a file
+log_path = "logpeek-logs" # When log_to_file is true, logs will be written to this directory

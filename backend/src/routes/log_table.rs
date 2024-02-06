@@ -156,7 +156,7 @@ pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state)
     }
 }
 
-/// Serde deserialization decorator to map empty Strings to None,
+// Serde deserialization decorator to map empty Strings to None,
 fn empty_string_as_none<'de, D, T>(de: D) -> Result<Option<T>, D::Error>
 where
     D: Deserializer<'de>,
