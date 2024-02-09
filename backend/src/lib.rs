@@ -80,9 +80,10 @@ pub async fn run() {
         host_name
     };
 
-    let app: Router = router_setup(shared_state);
+    let host_address = SETTINGS.read().await.get_string("main.address").unwrap_or("0.0.0.0:3001".to_string());
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3001").await.unwrap();
-    info!("Listening on http://0.0.0.0:3001");
+    let app: Router = router_setup(shared_state);
+    let listener = tokio::net::TcpListener::bind(&host_address).await.unwrap();
+    info!("Listening on http://{}", &host_address);
     axum::serve(listener, app).await.unwrap();
 }

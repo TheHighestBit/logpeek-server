@@ -1,7 +1,18 @@
 [main]
 buffer_size = 1_000_000 # The size of the log buffer that is kept in memory. When the buffer is full, the oldest logs are discarded.
+address = "0.0.0.0:3001" # Host address of the server
 
 [main.logger]
 debug = false # When true, sets the minimum log level to trace
 log_to_file = true # When true, logs will be written to a file
 log_path = "logpeek-logs" # When log_to_file is true, logs will be written to this directory
+
+[[application]]
+path = "logpeek-logs" # Path to the application's log folder
+parser = '''^(?P<timestamp>\S+) (?P<level>\S+) (?P<module>\S+) - (?P<message>.+)$''' # The regular expression used to parse the logs files of this application
+timeformat = "iso8601" # The format of the timestamp in the logs. Supported formats are "iso8601", "rfc3339" and "rfc2822"
+#
+#[[application]]
+#path = "path/to/app2" # The path to the app
+#parser = "12345"
+#timeformat = "rfc3339"

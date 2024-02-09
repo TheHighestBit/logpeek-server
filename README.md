@@ -1,7 +1,6 @@
 TODO:
- - Finalize structure of config file
- - Figure out how to support multiple source folders along with respective parsers
- - Create logic for reading in new log entries
+ - Review the parser regex
+ - Create logic for reading in new log entries via a cron job
  - Clean up the async handling in the frontend
  - Add login/auth
  - Create snackbar for displaying errors/messages
