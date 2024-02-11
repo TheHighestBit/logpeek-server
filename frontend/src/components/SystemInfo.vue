@@ -24,10 +24,11 @@
 <script setup lang="ts">
 import { SystemInfo } from "@/interfaces/SystemInfo";
 import {onBeforeUnmount, ref} from "vue";
+import {fetchWithAuth} from "@/utils";
 
-const system_info = ref<SystemInfo>(await fetch("/api/sysinfo").then((res) => res.json()));
+const system_info = ref<SystemInfo>(await fetchWithAuth("/api/sysinfo").then((res) => res.json()));
 const inervalID = setInterval(() => {
-  fetch("/api/sysinfo").then((res) => res.json()).then((data) => {
+  fetchWithAuth("/api/sysinfo").then((res) => res.json()).then((data) => {
     system_info.value = data;
   });
 }, 5000);

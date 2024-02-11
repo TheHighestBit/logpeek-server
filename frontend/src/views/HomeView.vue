@@ -29,8 +29,9 @@ import {
   VueUi3dBar,
 } from "vue-data-ui";
 import SystemInfo from "@/components/SystemInfo.vue";
+import {fetchWithAuth} from "@/utils";
 
-const dashboard_info: DashboardInfo = await fetch("/api/dashboard_info").then((res) => res.json());
+const dashboard_info: DashboardInfo = await fetchWithAuth("/api/dashboard_info").then((res) => res.json());
 
 const dataset = ref<VueUi3dBarDataset>({
   percentage: dashboard_info.log_buffer_usage,

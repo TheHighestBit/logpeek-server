@@ -1,6 +1,7 @@
 [main]
 buffer_size = 1_000_000 # The size of the log buffer that is kept in memory. When the buffer is full, the oldest logs are discarded.
 address = "0.0.0.0:3001" # Host address of the server
+secret = "asdf" # The password used for authentication. Removing this key will disable authentication.
 
 [main.logger]
 debug = false # When true, sets the minimum log level to trace

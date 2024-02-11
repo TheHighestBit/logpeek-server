@@ -63,6 +63,7 @@ import '@vuepic/vue-datepicker/dist/main.css';
 import {LogEntry} from "@/interfaces/LogEntry";
 import {LogTableResponse} from "@/interfaces/LogTableResponse";
 import { endOfMonth, endOfYear, startOfMonth, startOfYear, subMonths, subDays } from 'date-fns';
+import {fetchWithAuth} from "@/utils";
 
 const items = ref<LogEntry[]>([]);
 
@@ -141,7 +142,7 @@ const load = async ({ page, itemsPerPage }: { page: number, itemsPerPage: number
     search_params.append("module_name", module_filter.value);
   }
 
-  const response: LogTableResponse = await fetch("/api/log_table?" + search_params).then((res) => res.json());
+  const response: LogTableResponse = await fetchWithAuth("/api/log_table?" + search_params).then((res) => res.json());
   response.logs.map((item: LogEntry) => {
     item.index = (page - 1) * itemsPerPage + response.logs.indexOf(item) + 1;
   });

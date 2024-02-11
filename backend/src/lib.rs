@@ -1,5 +1,6 @@
 mod routes;
 mod log_reader;
+mod auth;
 
 use ringbuffer::{AllocRingBuffer, RingBuffer};
 use serde::Serialize;
@@ -82,7 +83,7 @@ pub async fn run() {
 
     let host_address = SETTINGS.read().await.get_string("main.address").unwrap_or("0.0.0.0:3001".to_string());
 
-    let app: Router = router_setup(shared_state);
+    let app: Router = router_setup(shared_state).await;
     let listener = tokio::net::TcpListener::bind(&host_address).await.unwrap();
     info!("Listening on http://{}", &host_address);
     axum::serve(listener, app).await.unwrap();
