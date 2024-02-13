@@ -50,8 +50,8 @@ pub async fn sysinfo_handler(State(shared_state): State<SharedState>) -> (Status
         memory_usage,
         total_memory,
         cpu_usage,
-        os: shared_state.os.clone(),
-        host_name: shared_state.host_name.clone(),
+        os: (*shared_state.os).clone(),
+        host_name: (*shared_state.host_name).clone(),
         uptime: format!("{:}:{}:{}:{}", uptime.whole_days(), uptime.whole_hours() % 24, uptime.whole_minutes() % 60, uptime.whole_seconds() % 60),
     }))
 }

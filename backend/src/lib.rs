@@ -1,7 +1,8 @@
 mod routes;
 mod log_reader;
-mod auth;
+mod middleware;
 
+use std::collections::HashMap;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
 use serde::Serialize;
 use std::sync::Arc;
@@ -9,7 +10,7 @@ use time::OffsetDateTime;
 use axum::Router;
 use config::Config;
 use lazy_static::lazy_static;
-use log::{info, LevelFilter};
+use log::{error, info, LevelFilter};
 use logpeek::config::LoggingMode;
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, System};
 use tokio::sync::{Mutex, RwLock};
@@ -27,9 +28,11 @@ struct LogEntry {
 #[derive(Clone)]
 struct SharedState {
     log_buffer: Arc<RwLock<AllocRingBuffer<LogEntry>>>,
+    cache: Arc<Mutex<HashMap<String, (std::time::SystemTime, usize)>>>,
+    last_buffer_update: Arc<Mutex<std::time::SystemTime>>,
     sys: Arc<Mutex<System>>,
-    os: String,
-    host_name: String,
+    os: Arc<String>,
+    host_name: Arc<String>,
 }
 
 // Environment overrides the config file
@@ -60,10 +63,11 @@ pub async fn run() {
     info!("Starting...");
 
     //Read in and process the log entries
-    let log_entries = log_reader::load_logs().await.map_err(|err| {
-        panic!("Error loading logs: {}", err)
-    }).unwrap();
-    info!("Loaded {} log entries", log_entries.read().await.len());
+    let log_buffer = Arc::new(RwLock::new(AllocRingBuffer::new(SETTINGS.read().await.get_int("main.buffer_size").unwrap_or(1_000_000) as usize)));
+    let cache = Arc::new(Mutex::new(HashMap::new()));
+
+    log_reader::load_logs(log_buffer.clone(), cache.clone()).await;
+    info!("Loaded {} log entries", log_buffer.read().await.len());
 
     // Initialize the system info
     let sys = Arc::new(Mutex::new(System::new_with_specifics(
@@ -75,10 +79,12 @@ pub async fn run() {
     let host_name = System::host_name().unwrap_or_default();
 
     let shared_state = SharedState {
-        log_buffer: log_entries,
+        log_buffer,
+        cache,
+        last_buffer_update: Arc::new(Mutex::new(std::time::SystemTime::now())),
         sys,
-        os,
-        host_name
+        os: Arc::new(os),
+        host_name: Arc::new(host_name)
     };
 
     let host_address = SETTINGS.read().await.get_string("main.address").unwrap_or("0.0.0.0:3001".to_string());

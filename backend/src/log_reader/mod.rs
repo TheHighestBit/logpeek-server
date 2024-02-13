@@ -5,13 +5,14 @@ use ringbuffer::{AllocRingBuffer, RingBuffer};
 use std::{fs::File};
 use std::collections::HashMap;
 use std::fs::metadata;
+use std::io::{BufRead, BufReader};
 use log::{error};
 use std::sync::Arc;
 use config::{Value, ValueKind};
 use glob::glob;
 use regex::Regex;
 use rev_lines::RevLines;
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 use crate::LogEntry;
 use crate::SETTINGS;
 
@@ -21,9 +22,10 @@ pub enum TimeFormat {
     Rfc2822,
 }
 
-pub async fn load_logs() -> Result<Arc<RwLock<AllocRingBuffer<LogEntry>>>> {
-    let mut result = AllocRingBuffer::new(SETTINGS.read().await.get_int("main.buffer_size").unwrap_or(1_000_000) as usize);
+pub async fn load_logs(buffer: Arc<RwLock<AllocRingBuffer<LogEntry>>>, cache: Arc<Mutex<HashMap<String, (std::time::SystemTime, usize)>>>) {
+    let mut log_buffer = buffer.write().await;
     let mut log_files = Vec::new();
+    let mut cache = cache.lock().await;
 
     let apps = SETTINGS.read().await.get_array("application").unwrap_or(vec![Value::new(None, create_default_map())]);
 
@@ -66,17 +68,31 @@ pub async fn load_logs() -> Result<Arc<RwLock<AllocRingBuffer<LogEntry>>>> {
             }
         }
 
-        // Sort the log files by modified time
+        // Filter out files that haven't been modified since the last time we read them
+        log_files.retain(|file| {
+            let (path, modified_time) = file;
+            match cache.get(path.to_str().unwrap()) {
+                Some((cache_time, _)) => modified_time > cache_time,
+                None => true,
+            }
+        });
         log_files.sort_by(|a, b| b.1.cmp(&a.1));
 
-        for log_file in log_files.iter() {
-            let file = File::open(log_file.0.clone())?;
-            let reader = RevLines::new(file);
-            for (i, line) in reader.enumerate() {
+        for log_file in log_files.iter().rev() {
+            let file = File::open(log_file.0.clone()).expect("Failed to open file");
+            let reader = BufReader::new(file);
+            let mut line_count = 0;
+
+            let lines_to_skip = match cache.get(log_file.0.to_str().unwrap()) {
+                Some(cached_value) => cached_value.1,
+                None => 0,
+            };
+
+            for (i, line) in reader.lines().skip(lines_to_skip).enumerate() {
                 match line {
                     Ok(line) => {
                         match parser::parse_entry(&line, &app_parser, &app_timeformat) {
-                            Ok(parse_result) => result.push(parse_result),
+                            Ok(parse_result) => log_buffer.push(parse_result),
                             Err(err) => {
                                 error!("{} on line {} in file {}", err, i + 1, log_file.0.to_str().unwrap());
                             }
@@ -86,13 +102,15 @@ pub async fn load_logs() -> Result<Arc<RwLock<AllocRingBuffer<LogEntry>>>> {
                         error!("{}", err);
                     }
                 }
+
+                line_count = i;
             }
+
+            cache.insert(log_file.0.to_str().unwrap().to_string(), (log_file.1, line_count));
         }
 
         log_files.clear();
     }
-
-    Ok(Arc::new(RwLock::new(result)))
 }
 
 fn get_modified_time(path: &str) -> std::time::SystemTime {

@@ -130,7 +130,8 @@ pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state)
     match log_filter_result {
         Ok(log_filter) => {
             let log_array = shared_state.log_buffer.read().await;
-            let result = log_array.iter()
+
+            let result = log_array.iter().rev()
                 .skip(log_filter.index)
                 .filter(|entry| log_filter.matches(entry))
                 .take(log_filter.items_per_page)
