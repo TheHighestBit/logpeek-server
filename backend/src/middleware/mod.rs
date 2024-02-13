@@ -49,8 +49,9 @@ pub async fn authentication_middleware(req: Request<Body>, next: Next) -> Result
 
 pub async fn buffer_refresh_middleware(State(shared_state): State<SharedState>, req: Request, next: Next) -> Result<Response, StatusCode> {
     let mut last_buffer_update = shared_state.last_buffer_update.lock().await;
+    let update_cooldown = Duration::from_secs(SETTINGS.read().await.get_int("main.buffer_update_cooldown").unwrap_or(10) as u64);
 
-    if last_buffer_update.elapsed().unwrap_or(Duration::from_secs(15)) > Duration::from_secs(SETTINGS.read().await.get_int("main.buffer_update_cooldown").unwrap_or(10) as u64) {
+    if last_buffer_update.elapsed().unwrap_or(Duration::from_secs(15)) > update_cooldown || req.headers().contains_key("force-refresh") {
         load_logs(shared_state.log_buffer.clone(), shared_state.cache.clone()).await;
         *last_buffer_update = SystemTime::now();
 

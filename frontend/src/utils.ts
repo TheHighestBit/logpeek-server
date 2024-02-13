@@ -1,4 +1,4 @@
-export async function fetchWithAuth(url: string, redirect = true): Promise<Response> {
+export async function fetchWithAuth(url: string, redirect = true, additional_headers = {}): Promise<Response> {
   const secret = localStorage.getItem('secret');
   let response;
 
@@ -8,6 +8,7 @@ export async function fetchWithAuth(url: string, redirect = true): Promise<Respo
     const credentials = btoa(`default:${secret}`); // Using the built-in btoa function
     const headers = {
       Authorization: `Basic ${credentials}`,
+      ...additional_headers,
     };
 
     response = await fetch(url, { headers });
