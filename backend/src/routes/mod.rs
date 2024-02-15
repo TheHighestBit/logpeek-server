@@ -31,8 +31,9 @@ pub async fn router_setup(shared_state: SharedState) -> Router {
     }
 
     // These routes are excluded from authentication
-    router = router.route("/", get(index_handler))
-        .route("/assets/*file", get(static_handler));
+    router = router
+        .route("/assets/*file", get(static_handler))
+        .fallback(index_handler);
 
     router
 }

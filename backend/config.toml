@@ -1,13 +1,18 @@
 [main]
 buffer_size = 1_000_000 # The size of the log buffer that is kept in memory. When the buffer is full, the oldest logs are discarded.
-address = "0.0.0.0:3001" # Host address of the server
+address = "127.0.0.1:3001" # Host address of the server
 secret = "asdf" # The password used for authentication. Removing this key will disable authentication.
-buffer_update_cooldown = 10
+buffer_update_cooldown = 10 # In seconds
 
 [main.logger]
-debug = false # When true, sets the minimum log level to trace
+debug = false # When true, sets the minimum log level to debug
 log_to_file = true # When true, logs will be written to a file
 log_path = "logpeek-logs" # When log_to_file is true, logs will be written to this directory
+
+[https]
+enabled = false # When true, the server will use HTTPS
+cert = "certs/localhost.pem" # The path to the certificate file, must be in PEM format
+key = "certs/localhost-key.pem" # The path to the key file, must be in PEM format
 
 [[application]]
 path = "logpeek-logs" # Path to the application's log folder

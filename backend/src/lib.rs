@@ -8,6 +8,7 @@ use serde::Serialize;
 use std::sync::Arc;
 use time::OffsetDateTime;
 use axum::Router;
+use axum_server::tls_rustls::RustlsConfig;
 use config::Config;
 use lazy_static::lazy_static;
 use log::{error, info, LevelFilter};
@@ -49,7 +50,7 @@ pub async fn run() {
     let logger_config = logpeek::config::Config {
         datetime_format: logpeek::config::DateTimeFormat::ISO8601,
         min_log_level: match SETTINGS.read().await.get_bool("main.logger.debug").unwrap_or(false) {
-            true => LevelFilter::Trace,
+            true => LevelFilter::Debug,
             false => LevelFilter::Info
         },
         out_dir_name: logpeek::config::OutputDirName::Custom(SETTINGS.read().await.get_string("main.logger.log_dir").unwrap_or("logpeek-logs".to_string())),
@@ -87,10 +88,27 @@ pub async fn run() {
         host_name: Arc::new(host_name)
     };
 
-    let host_address = SETTINGS.read().await.get_string("main.address").unwrap_or("0.0.0.0:3001".to_string());
+    let host_address = SETTINGS.read().await.get_string("main.address").unwrap_or("127.0.0.1:3001".to_string());
 
     let app: Router = router_setup(shared_state).await;
-    let listener = tokio::net::TcpListener::bind(&host_address).await.unwrap();
-    info!("Listening on http://{}", &host_address);
-    axum::serve(listener, app).await.unwrap();
+
+    if SETTINGS.read().await.get_bool("https.enabled").unwrap_or(false) {
+        let tls_config = RustlsConfig::from_pem_file(
+            SETTINGS.read().await.get_string("https.cert").expect("Failed to read https.cert"),
+            SETTINGS.read().await.get_string("https.key").expect("Failed to read https.key"),
+        ).await.expect("Failed to create TLS config");
+
+        info!("Listening on https://{}", &host_address);
+
+        axum_server::bind_rustls(host_address.parse().unwrap(), tls_config)
+            .serve(app.into_make_service())
+            .await
+            .unwrap();
+    } else {
+        info!("Listening on http://{}", &host_address);
+        axum_server::bind(host_address.parse().unwrap())
+            .serve(app.into_make_service())
+            .await
+            .unwrap();
+    }
 }

@@ -51,7 +51,8 @@ pub async fn buffer_refresh_middleware(State(shared_state): State<SharedState>, 
     let mut last_buffer_update = shared_state.last_buffer_update.lock().await;
     let update_cooldown = Duration::from_secs(SETTINGS.read().await.get_int("main.buffer_update_cooldown").unwrap_or(10) as u64);
 
-    if last_buffer_update.elapsed().unwrap_or(Duration::from_secs(15)) > update_cooldown || req.headers().contains_key("force-refresh") {
+    // force-refresh header is only set by the force refresh button in the frontend
+    if req.headers().contains_key("force-refresh") || last_buffer_update.elapsed().unwrap_or(Duration::from_secs(15)) > update_cooldown {
         load_logs(shared_state.log_buffer.clone(), shared_state.cache.clone()).await;
         *last_buffer_update = SystemTime::now();
 
