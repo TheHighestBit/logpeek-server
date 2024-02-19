@@ -10,18 +10,25 @@
 </template>
 
 <script lang="ts" setup>
+import {fetchWithAuth} from "@/utils";
+import {useAppStore} from "@/store/app";
 
-  import {fetchWithAuth} from "@/utils";
+const store = useAppStore();
+const logout = () => {
+  localStorage.removeItem('secret');
+  window.location.href = "/login";
+}
 
-  const logout = () => {
-    localStorage.removeItem('secret');
-    window.location.href = "/login";
-  }
-
-  const force_refresh = () => {
-    // Authenticate is the cheapest endpoint to trigger the middleware
-    fetchWithAuth("/api/authenticate", false, {
-      "force-refresh": true,
-    });
-  }
+const force_refresh = () => {
+  // Authenticate is the cheapest endpoint to trigger the middleware
+  fetchWithAuth("/api/authenticate", false, {
+    "force-refresh": true,
+  }).then((res) => {
+    if (res.status === 200) {
+      store.showSnackbar("Refresh successful", "success");
+    }
+  }).catch(() => {
+    store.showSnackbar("Failed to force refresh", "error");
+  });
+}
 </script>

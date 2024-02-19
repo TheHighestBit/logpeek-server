@@ -7,7 +7,7 @@ use axum::middleware::Next;
 use axum::response::Response;
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
-use log::{error, info};
+use log::{debug, error, info};
 use ringbuffer::RingBuffer;
 use tokio::sync::Mutex;
 use crate::{SETTINGS, SharedState};
@@ -32,6 +32,7 @@ pub async fn authentication_middleware(req: Request<Body>, next: Next) -> Result
             let auth_parts: Vec<&str> = decoded_string.splitn(2, ':').collect();
 
             if SETTINGS.read().await.get_string("main.secret").expect("Failed to read main.secret") == auth_parts[1] {
+                debug!("User authenticated successfully");
                 Ok(next.run(req).await)
             } else {
                 error!("Invalid credentials");
@@ -56,7 +57,7 @@ pub async fn buffer_refresh_middleware(State(shared_state): State<SharedState>, 
         load_logs(shared_state.log_buffer.clone(), shared_state.cache.clone()).await;
         *last_buffer_update = SystemTime::now();
 
-        info!("Log entries updated");
+        debug!("Log entries updated");
     }
 
     Ok(next.run(req).await)

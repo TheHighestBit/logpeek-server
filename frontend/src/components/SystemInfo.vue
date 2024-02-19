@@ -25,11 +25,16 @@
 import { SystemInfo } from "@/interfaces/SystemInfo";
 import {onBeforeUnmount, ref} from "vue";
 import {fetchWithAuth} from "@/utils";
+import {useAppStore} from "@/store/app";
+
+const store = useAppStore();
 
 const system_info = ref<SystemInfo>(await fetchWithAuth("/api/sysinfo").then((res) => res.json()));
 const inervalID = setInterval(() => {
   fetchWithAuth("/api/sysinfo").then((res) => res.json()).then((data) => {
     system_info.value = data;
+  }).catch(() => {
+    store.showSnackbar("Failed to fetch system info", "error");
   });
 }, 5000);
 

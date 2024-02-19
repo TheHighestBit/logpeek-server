@@ -1,7 +1,8 @@
 TODO:
- - Fix the log table resizing itself
- - Fix padding on the sparkline times
- - Create snackbar for displaying errors/messages
+ - Small issue with the sparkline bar heights
+ - Fix system info component changing size
+ - Disable the go to last page on the log table
+ - Add max number of wrong password attempts
 
 Dashboard:
  - An indicator of current health, eg. if the number of logs in the last hour is higher or lower than normal.

@@ -30,8 +30,13 @@ import {
 } from "vue-data-ui";
 import SystemInfo from "@/components/SystemInfo.vue";
 import {fetchWithAuth} from "@/utils";
+import {useAppStore} from "@/store/app";
 
-const dashboard_info: DashboardInfo = await fetchWithAuth("/api/dashboard_info").then((res) => res.json());
+const store = useAppStore();
+const dashboard_info: DashboardInfo = await fetchWithAuth("/api/dashboard_info").then((res) => res.json())
+  .catch(() => {
+    store.showSnackbar("Failed to fetch dashboard info", "error");
+  });
 
 const dataset = ref<VueUi3dBarDataset>({
   percentage: dashboard_info.log_buffer_usage,

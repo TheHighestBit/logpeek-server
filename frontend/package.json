@@ -12,7 +12,7 @@
     "@mdi/font": "7.0.96",
     "@vuepic/vue-datepicker": "^7.4.1",
     "core-js": "^3.29.0",
-    "pinia": "^2.0.0",
+    "pinia": "^2.1.7",
     "roboto-fontface": "*",
     "vue": "^3.2.0",
     "vue-data-ui": "^1.9.52",

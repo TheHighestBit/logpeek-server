@@ -59,13 +59,16 @@ const config = ref<VueUiSparklineConfig>({
 const dataset = computed(() => {
   if (props.data) {
     const dataset: VueUiSparklineDatasetItem[] = [];
-    const currentData = new Date();
-    const currentHour = currentData.getHours();
-    const currentMinute = currentData.getMinutes();
+    const currentDate = new Date();
+    const currentHour = currentDate.getHours();
+    const currentMinute = currentDate.getMinutes().toString().padStart(2, "0");
 
     for (let i = props.data.length - 1; i >= 0; i--) {
+      const displayHourStart = ((currentHour - i + 23) % 24).toString().padStart(2, "0");
+      const displayHourEnd = ((currentHour - i + 24) % 24).toString().padStart(2, "0");
+
       dataset.push({
-        period: `${i + 1} hours ago, ${(currentHour - i - 1 + 24) % 24}:${currentMinute} - ${(currentHour - i + 24) % 24}:${currentMinute} LOCAL`,
+        period: `${i + 1} hours ago, ${displayHourStart}:${currentMinute} - ${displayHourEnd}:${currentMinute} LOCAL`,
         value: props.data[i],
       });
     }
