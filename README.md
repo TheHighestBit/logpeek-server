@@ -1,4 +1,6 @@
 TODO:
+ - Finish styling the module component
+ - Also add another sparkline for last 7 days of logs
  - Small issue with the sparkline bar heights
  - Fix system info component changing size
  - Disable the go to last page on the log table

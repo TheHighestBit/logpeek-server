@@ -1,6 +1,5 @@
 <template>
   <VueUiSparkline
-    ref="sparkline"
     :config="config"
     :dataset="dataset"
   ></VueUiSparkline>
@@ -19,6 +18,7 @@ import {
 const props = defineProps({
   bar_color: String,
   sparkbar_title: String,
+  is_week: Boolean,
   data: Array as PropType<number[]>,
 });
 
@@ -60,20 +60,43 @@ const dataset = computed(() => {
   if (props.data) {
     const dataset: VueUiSparklineDatasetItem[] = [];
     const currentDate = new Date();
-    const currentHour = currentDate.getHours();
-    const currentMinute = currentDate.getMinutes().toString().padStart(2, "0");
 
-    for (let i = props.data.length - 1; i >= 0; i--) {
-      const displayHourStart = ((currentHour - i + 23) % 24).toString().padStart(2, "0");
-      const displayHourEnd = ((currentHour - i + 24) % 24).toString().padStart(2, "0");
+    if (!props.is_week) {
+      const currentHour = currentDate.getHours();
+      const currentMinute = currentDate.getMinutes().toString().padStart(2, "0");
+
+      for (let i = props.data.length - 1; i >= 0; i--) {
+        const displayHourStart = ((currentHour - i + 23) % 24).toString().padStart(2, "0");
+        const displayHourEnd = ((currentHour - i + 24) % 24).toString().padStart(2, "0");
+
+        dataset.push({
+          period: `${i + 1} hours ago, ${displayHourStart}:${currentMinute} - ${displayHourEnd}:${currentMinute} LOCAL`,
+          value: props.data[i],
+        });
+      }
+
+      return dataset;
+    } else {
+      for (let i = props.data.length - 1; i >= 2; i--) {
+        dataset.push({
+          period: `${i} days ago`,
+          value: props.data[i],
+        });
+      }
 
       dataset.push({
-        period: `${i + 1} hours ago, ${displayHourStart}:${currentMinute} - ${displayHourEnd}:${currentMinute} LOCAL`,
-        value: props.data[i],
+        period: "Yesterday",
+        value: props.data[1],
       });
+
+      dataset.push({
+        period: "Today",
+        value: props.data[0],
+      })
+
+      return dataset;
     }
-    return dataset;
-    }
+  }
 
   return [];
 });
