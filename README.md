@@ -1,5 +1,6 @@
 TODO:
  - Finish styling the module component
+ - Figure out how to get the table to automatically fill the entire screen
  - Also add another sparkline for last 7 days of logs
  - Small issue with the sparkline bar heights
  - Fix system info component changing size

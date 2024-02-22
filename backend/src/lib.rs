@@ -32,6 +32,7 @@ struct SharedState {
     cache: Arc<Mutex<HashMap<String, (std::time::SystemTime, usize)>>>,
     last_buffer_update: Arc<Mutex<std::time::SystemTime>>,
     sys: Arc<Mutex<System>>,
+    server_start_time: Arc<std::time::SystemTime>,
     os: Arc<String>,
     host_name: Arc<String>,
 }
@@ -84,6 +85,7 @@ pub async fn run() {
         cache,
         last_buffer_update: Arc::new(Mutex::new(std::time::SystemTime::now())),
         sys,
+        server_start_time: Arc::new(std::time::SystemTime::now()),
         os: Arc::new(os),
         host_name: Arc::new(host_name)
     };

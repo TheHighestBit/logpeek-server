@@ -16,6 +16,7 @@ pub struct SystemInfoResponse {
     os: String,
     host_name: String,
     uptime: String,
+    server_uptime: String,
 }
 
 pub async fn sysinfo_handler(State(shared_state): State<SharedState>) -> (StatusCode, Json<SystemInfoResponse>) {
@@ -46,12 +47,15 @@ pub async fn sysinfo_handler(State(shared_state): State<SharedState>) -> (Status
         uptime = Duration::seconds(System::uptime() as i64);
     }
 
+    let server_uptime = shared_state.server_start_time.elapsed().unwrap_or(core::time::Duration::new(0, 0)).as_secs();
+
     (StatusCode::OK, Json(SystemInfoResponse {
         memory_usage,
         total_memory,
         cpu_usage,
         os: (*shared_state.os).clone(),
         host_name: (*shared_state.host_name).clone(),
-        uptime: format!("{:}:{}:{}:{}", uptime.whole_days(), uptime.whole_hours() % 24, uptime.whole_minutes() % 60, uptime.whole_seconds() % 60),
+        uptime: format!("{}:{}:{}:{}", uptime.whole_days(), uptime.whole_hours() % 24, uptime.whole_minutes() % 60, uptime.whole_seconds() % 60),
+        server_uptime: format!("{}:{}:{}:{}", server_uptime / 86400, (server_uptime % 86400) / 3600, (server_uptime % 3600) / 60, server_uptime % 60),
     }))
 }

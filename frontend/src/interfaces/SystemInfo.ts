@@ -5,4 +5,5 @@ export interface SystemInfo {
   os: string;
   host_name: string;
   uptime: string;
+  server_uptime: string;
 }

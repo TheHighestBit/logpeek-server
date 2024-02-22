@@ -3,7 +3,7 @@
     :config="config"
     :dataset="dataset"
   ></VueUiSparkline>
-</template>
+</template> `
 
 <script lang="ts" setup>
 import { computed } from "vue";

@@ -1,8 +1,10 @@
 <template>
-  <VueUiSparkbar
-    :config="config"
-    :dataset="dataset"
-  ></VueUiSparkbar>
+  <v-card :title="props.card_title" rounded="0" class="pl-3 pr-3 pb-3">
+    <VueUiSparkbar
+      :config="config"
+      :dataset="dataset"
+    ></VueUiSparkbar>
+  </v-card>
 </template>
 
 <script setup lang="ts">
@@ -10,6 +12,7 @@ import {VueUiSparkbar, VueUiSparkbarConfig, VueUiSparkbarDatasetItem} from "vue-
 import {computed, PropType, ref} from "vue";
 
 const props = defineProps({
+  card_title: String,
   data: Array as PropType<[string, number][]>,
 });
 

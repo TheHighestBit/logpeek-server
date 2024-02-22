@@ -8,15 +8,16 @@
         <SmallSparkline :bar_color="colors.primary" :data="dashboard_info.total_logs_24" :is_week="false" sparkbar_title="24h Log Entries"></SmallSparkline>
         <SmallSparkline :bar_color="colors.log_error" :data="dashboard_info.error_logs_24" :is_week="false" sparkbar_title="24h Errors"></SmallSparkline>
         <SmallSparkline :bar_color="colors.log_warning" :data="dashboard_info.warning_logs_24" :is_week="false" sparkbar_title="24h Warnings"></SmallSparkline>
+        <ErrorCountByModule :data="dashboard_info.top_modules_24" card_title="24h errors by module"></ErrorCountByModule>
       </v-col>
       <v-col>
         <SmallSparkline :bar_color="colors.primary" :data="dashboard_info.total_logs_week" :is_week="true" sparkbar_title="7d Log Entries"></SmallSparkline>
         <SmallSparkline :bar_color="colors.log_error" :data="dashboard_info.error_logs_week" :is_week="true" sparkbar_title="7d Errors"></SmallSparkline>
         <SmallSparkline :bar_color="colors.log_warning" :data="dashboard_info.warning_logs_week" :is_week="true" sparkbar_title="7d Warnings"></SmallSparkline>
+        <ErrorCountByModule :data="dashboard_info.top_modules_week" card_title="7d errors by module"></ErrorCountByModule>
       </v-col>
       <v-col>
         <VueUi3dBar :config="config" :dataset="dataset"></VueUi3dBar>
-        <ErrorCountByModule :data="dashboard_info.top_modules"></ErrorCountByModule>
       </v-col>
     </v-row>
   </v-container>
