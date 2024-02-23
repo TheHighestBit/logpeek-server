@@ -35,6 +35,7 @@ struct SharedState {
     server_start_time: Arc<std::time::SystemTime>,
     os: Arc<String>,
     host_name: Arc<String>,
+    login_attempts: Arc<Mutex<u32>>,
 }
 
 // Environment overrides the config file
@@ -87,7 +88,8 @@ pub async fn run() {
         sys,
         server_start_time: Arc::new(std::time::SystemTime::now()),
         os: Arc::new(os),
-        host_name: Arc::new(host_name)
+        host_name: Arc::new(host_name),
+        login_attempts: Arc::new(Mutex::new(0)),
     };
 
     let host_address = SETTINGS.read().await.get_string("main.address").unwrap_or("127.0.0.1:3001".to_string());

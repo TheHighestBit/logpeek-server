@@ -1,5 +1,5 @@
 <template>
-  <v-card>
+  <v-card height="97vh">
     <v-row>
       <v-col cols="7">
         <VueDatePicker v-model="date_range_filter" range utc time-picker-inline dark :preset-dates="presetDates">
@@ -42,7 +42,7 @@
       </v-col>
     </v-row>
     <v-data-table-server
-      height="80vh"
+      height="calc(97vh - 200px)"
       v-model:items-per-page="itemsPerPage"
       :headers="headers"
       :items-length="totalItems"

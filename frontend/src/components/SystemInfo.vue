@@ -48,7 +48,6 @@ const inervalID = setInterval(() => {
     system_info.value = data;
     statusColor.value = "green";
   }).catch(() => {
-    store.showSnackbar("Failed to fetch system info", "error");
     statusColor.value = "red";
   });
 }, 5000);

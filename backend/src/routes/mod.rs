@@ -23,11 +23,11 @@ pub async fn router_setup(shared_state: SharedState) -> Router {
         .route("/api/authenticate", get(authenticate_handler))
         .layer(from_fn_with_state(shared_state.clone(), middleware::buffer_refresh_middleware))
         .route("/api/sysinfo", get(sysinfo_handler))
-        .with_state(shared_state);
+        .with_state(shared_state.clone());
 
     if !SETTINGS.read().await.get_string("main.secret").unwrap_or("".to_string()).is_empty() {
         info!("Authentication enabled");
-        router = router.layer(from_fn(middleware::authentication_middleware));
+        router = router.layer(from_fn_with_state(shared_state, middleware::authentication_middleware));
     }
 
     // These routes are excluded from authentication

@@ -1,9 +1,11 @@
 <template>
   <v-card :title="props.card_title" rounded="0" class="pl-3 pr-3 pb-3">
     <VueUiSparkbar
+      v-if="props.data"
       :config="config"
       :dataset="dataset"
     ></VueUiSparkbar>
+    <v-card-subtitle v-else>No errors</v-card-subtitle>
   </v-card>
 </template>
 

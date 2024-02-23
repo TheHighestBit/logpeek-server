@@ -7,13 +7,21 @@ use axum::middleware::Next;
 use axum::response::Response;
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use ringbuffer::RingBuffer;
 use tokio::sync::Mutex;
 use crate::{SETTINGS, SharedState};
 use crate::log_reader::load_logs;
 
-pub async fn authentication_middleware(req: Request<Body>, next: Next) -> Result<Response, StatusCode> {
+pub async fn authentication_middleware(State(shared_state): State<SharedState>, req: Request<Body>, next: Next) -> Result<Response, StatusCode> {
+    let mut login_attempts = shared_state.login_attempts.lock().await;
+    let max_login_attempts = SETTINGS.read().await.get_int("main.max_login_attempts").unwrap_or(5) as u32;
+    
+    if *login_attempts >= max_login_attempts {
+        warn!("Server locked due to too many failed login attempts. Manual restart required.");
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+    
     let auth_header = req.headers().get(header::AUTHORIZATION).and_then(|val| val.to_str().ok());
 
     if let Some(auth_header) = auth_header {
@@ -35,7 +43,9 @@ pub async fn authentication_middleware(req: Request<Body>, next: Next) -> Result
                 debug!("User authenticated successfully");
                 Ok(next.run(req).await)
             } else {
-                error!("Invalid credentials");
+                *login_attempts += 1;
+                
+                warn!("Invalid credentials. Login attempts left: {}", max_login_attempts - *login_attempts);
                 Err(StatusCode::UNAUTHORIZED)
             }
         } else {
