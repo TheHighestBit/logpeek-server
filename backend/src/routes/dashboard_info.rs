@@ -89,6 +89,11 @@ pub async fn dashboard_info_handler(State(shared_state): State<SharedState>) -> 
     top_modules_week = module_count.into_iter().take(5)
         .map(|(module, count)| (module, count * 100 / total_week_errors))
         .collect();
+    
+    // Special case when all logs are from past 24h
+    if !flag_24 {
+        top_modules_24 = top_modules_week.clone();
+    }
 
     Json(DashboardResponse {
         total_logs_24,
