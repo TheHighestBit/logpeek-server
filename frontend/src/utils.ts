@@ -5,7 +5,7 @@ export async function fetchWithAuth(url: string, redirect = true, additional_hea
   if (!secret) { // Auth might not be enabled on the server side
     response = await fetch(url);
   } else {
-    const credentials = btoa(`default:${secret}`); // Using the built-in btoa function
+    const credentials = btoa(`default:${secret}`);
     const headers = {
       Authorization: `Basic ${credentials}`,
       ...additional_headers,

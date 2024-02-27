@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap};
 use axum::{Json};
 use axum::extract::State;
 use log::trace;
@@ -20,6 +20,7 @@ pub struct DashboardResponse {
     top_modules_24: Vec<(String, u32)>,
     top_modules_week: Vec<(String, u32)>,
     log_buffer_usage: f32,
+    total_log_entries: u32,
 }
 
 pub async fn dashboard_info_handler(State(shared_state): State<SharedState>) -> Json<DashboardResponse> {
@@ -35,7 +36,6 @@ pub async fn dashboard_info_handler(State(shared_state): State<SharedState>) -> 
     let mut warning_logs_week: [u32; 7] = [0; 7];
     let mut module_counter_tree: BTreeMap<String, u32> = BTreeMap::new();
     let mut top_modules_24: Vec<(String, u32)> = Vec::new();
-    let mut top_modules_week: Vec<(String, u32)> = Vec::new();
     let mut flag_24 = false;
 
     for entry in log_array.iter().rev().take_while(|entry| entry.timestamp > current_time - time::Duration::days(7)) {
@@ -86,7 +86,7 @@ pub async fn dashboard_info_handler(State(shared_state): State<SharedState>) -> 
     module_count.sort_by(|a, b| b.1.cmp(&a.1));
 
     let total_week_errors = error_logs_week.iter().sum::<u32>();
-    top_modules_week = module_count.into_iter().take(5)
+    let top_modules_week: Vec<(String, u32)> = module_count.into_iter().take(5)
         .map(|(module, count)| (module, count * 100 / total_week_errors))
         .collect();
     
@@ -104,6 +104,7 @@ pub async fn dashboard_info_handler(State(shared_state): State<SharedState>) -> 
         warning_logs_week,
         top_modules_24,
         top_modules_week,
-        log_buffer_usage: log_array.len() as f32 / log_array.capacity() as f32,
+        log_buffer_usage: log_array.len() as f32 / log_array.capacity() as f32 * 100.0,
+        total_log_entries: log_array.len() as u32,
     })
 }

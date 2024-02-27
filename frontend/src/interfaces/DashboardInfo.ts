@@ -8,4 +8,5 @@ export interface DashboardInfo {
     top_modules_24: [string, number][];
     top_modules_week: [string, number][];
     log_buffer_usage: number;
+    total_log_entries: number;
 }

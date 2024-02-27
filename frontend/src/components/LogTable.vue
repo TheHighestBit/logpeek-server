@@ -1,8 +1,9 @@
 <template>
-  <v-card height="97vh">
-    <v-row>
-      <v-col cols="7">
-        <VueDatePicker v-model="date_range_filter" range utc time-picker-inline dark :preset-dates="presetDates">
+  <v-card height="97vh" border>
+    <v-row class="flex-wrap pt-2 mb-n5">
+      <v-col sm="5" lg="2" class="ml-2">
+        <VueDatePicker v-model="date_range_filter" range utc time-picker-inline dark :preset-dates="presetDates"
+        placeholder="Select Timerange" :max-date="new Date()">
           <template #preset-date-range-button="{ label, value, presetDate }">
             <span
               role="button"
@@ -15,15 +16,10 @@
           </template>
         </VueDatePicker>
       </v-col>
-      <v-col cols="3">
+      <v-col sm="2" lg="1">
         <v-select v-model="min_log_level_filter" clearable variant="outlined" label="Min log level"
                   :items="['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR']" density="compact"></v-select>
       </v-col>
-      <v-col cols="2">
-        <v-btn class="mr-5" color="#6716bd" variant="elevated" :onclick="refresh_table">Refresh</v-btn>
-      </v-col>
-    </v-row>
-    <v-row>
       <v-col>
         <v-combobox v-model="message_filter"
                     clearable
@@ -40,9 +36,13 @@
                     :items="module_history"
                     density="compact"></v-combobox>
       </v-col>
+      <v-col sm="2" lg="1" align="end">
+        <v-btn class="mr-5 mb-n3" color="#6716bd" variant="elevated" :onclick="refresh_table">Refresh</v-btn>
+      </v-col>
     </v-row>
+    <v-divider class="border-opacity-50"></v-divider>
     <v-data-table-server
-      height="calc(97vh - 200px)"
+      height="calc(97vh - 130px)"
       v-model:items-per-page="itemsPerPage"
       :headers="headers"
       :items-length="totalItems"
@@ -102,12 +102,12 @@ const presetDates = ref([
   {label: 'Last 24h', value: [subDays(new Date(), 1), new Date()]},
   {label: 'Last 7 days', value: [subDays(new Date(), 7), new Date()]},
   {label: 'Last 30 days', value: [subDays(new Date(), 30), new Date()]},
-  {label: 'This month', value: [startOfMonth(new Date()), endOfMonth(new Date())]},
+  {label: 'This month', value: [startOfMonth(new Date()), new Date()]},
   {
     label: 'Last month',
     value: [startOfMonth(subMonths(new Date(), 1)), endOfMonth(subMonths(new Date(), 1))],
   },
-  {label: 'This year', value: [startOfYear(new Date()), endOfYear(new Date())]},
+  {label: 'This year', value: [startOfYear(new Date()), new Date()]},
 ]);
 
 const refresh_table = () => {
@@ -140,7 +140,6 @@ const load = async ({page, itemsPerPage}: { page: number, itemsPerPage: number }
   });
 
   if (date_range_filter.value !== null && date_range_filter.value.length > 0) {
-    //TODO show error if this is null
     search_params.append("start_timestamp", date_range_filter.value[0].toString());
 
     if (date_range_filter.value[1] !== null) {
@@ -222,5 +221,11 @@ const loadFromHistory = () => {
 <style>
 .dp__theme_dark {
   --dp-primary-color: #6716bd;
+  --dp-border-color: #858585;
+  --dp-border-color-hover: #FFFFFF;
+}
+
+.v-divider {
+  border-color: #6716bd;
 }
 </style>

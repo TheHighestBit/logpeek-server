@@ -11,7 +11,7 @@ use axum::Router;
 use axum_server::tls_rustls::RustlsConfig;
 use config::Config;
 use lazy_static::lazy_static;
-use log::{error, info, LevelFilter};
+use log::{info, LevelFilter};
 use logpeek::config::LoggingMode;
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, System};
 use tokio::sync::{Mutex, RwLock};
@@ -41,8 +41,8 @@ struct SharedState {
 // Environment overrides the config file
 lazy_static! {
     pub static ref SETTINGS: RwLock<Config> = RwLock::new(Config::builder()
-        .add_source(config::File::with_name("config.toml"))
-        .add_source(config::Environment::with_prefix("LOGPEEK"))
+        .add_source(config::File::with_name("config.toml").required(false))
+        .add_source(config::Environment::with_prefix("LOGPEEK").separator("_"))
         .build()
         .expect("There is an issue with the configuration file"));
 }
@@ -55,7 +55,7 @@ pub async fn run() {
             true => LevelFilter::Debug,
             false => LevelFilter::Info
         },
-        out_dir_name: logpeek::config::OutputDirName::Custom(SETTINGS.read().await.get_string("main.logger.log_dir").unwrap_or("logpeek-logs".to_string())),
+        out_dir_name: logpeek::config::OutputDirName::Custom(SETTINGS.read().await.get_string("main.logger.log_dir").unwrap_or_else(|_| "logpeek-logs".to_string())),
         logging_mode: match SETTINGS.read().await.get_bool("main.logger.log_to_file").unwrap_or(true) {
             true => LoggingMode::FileAndConsole,
             false => LoggingMode::Console
@@ -92,7 +92,7 @@ pub async fn run() {
         login_attempts: Arc::new(Mutex::new(0)),
     };
 
-    let host_address = SETTINGS.read().await.get_string("main.address").unwrap_or("127.0.0.1:3001".to_string());
+    let host_address = SETTINGS.read().await.get_string("main.address").unwrap_or_else(|_| "127.0.0.1:3001".to_string());
 
     let app: Router = router_setup(shared_state).await;
 

@@ -10,7 +10,7 @@ use ringbuffer::{RingBuffer};
 use time::OffsetDateTime;
 
 
-use crate::{LogEntry, SharedState};
+use crate::{LogEntry, SETTINGS, SharedState};
 
 #[derive(Debug, Deserialize)]
 pub struct Params {
@@ -137,10 +137,17 @@ pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state)
                 .take(log_filter.items_per_page)
                 .cloned()
                 .collect::<Vec<LogEntry>>();
+            
+            let total_items = match SETTINGS.read().await.get_bool("main.allow_dirty_pagination").unwrap_or(false) {
+                false => log_array.iter()
+                    .filter(|entry| log_filter.matches(entry))
+                    .count(),
+                true => log_array.len(),
+            };
 
             (StatusCode::OK, Json({
                 LogTableResponse {
-                    total_items: log_array.len(),
+                    total_items,
                     logs: result,
                 }
             }))

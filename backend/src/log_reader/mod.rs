@@ -1,17 +1,17 @@
 mod parser;
 
-use anyhow::Result;
+
 use ringbuffer::{AllocRingBuffer, RingBuffer};
 use std::{fs::File};
 use std::collections::HashMap;
 use std::fs::metadata;
 use std::io::{BufRead, BufReader};
-use log::{error};
+use log::{error, warn};
 use std::sync::Arc;
 use config::{Value, ValueKind};
 use glob::glob;
 use regex::Regex;
-use rev_lines::RevLines;
+
 use tokio::sync::{Mutex, RwLock};
 use crate::LogEntry;
 use crate::SETTINGS;
@@ -27,8 +27,8 @@ pub async fn load_logs(buffer: Arc<RwLock<AllocRingBuffer<LogEntry>>>, cache: Ar
     let mut log_files = Vec::new();
     let mut cache = cache.lock().await;
 
-    let apps = SETTINGS.read().await.get_array("application").unwrap_or(vec![Value::new(None, create_default_map())]);
-
+    let apps = SETTINGS.read().await.get_array("application").unwrap_or_else(|_| vec![Value::new(None, create_default_map())]);
+    
     for app in apps {
         let app_table = app.into_table().expect("Config file is formatted incorrectly!");
 
@@ -127,6 +127,8 @@ fn get_modified_time(path: &str) -> std::time::SystemTime {
 }
 
 fn create_default_map() -> ValueKind {
+    warn!("No application configurations found, proceeding with defaults.");
+    
     let mut map = HashMap::new();
     map.insert("path".to_string(), Value::new(None, ValueKind::String("logs".to_string())));
     map.insert("parser".to_string(), Value::new(None, ValueKind::String(r"^(?P<timestamp>\S+) (?P<level>\S+) (?P<module>\S+) - (?P<message>.+)$".to_string())));

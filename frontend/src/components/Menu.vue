@@ -15,8 +15,13 @@ import {useAppStore} from "@/store/app";
 
 const store = useAppStore();
 const logout = () => {
-  localStorage.removeItem('secret');
-  window.location.href = "/login";
+  if (localStorage.getItem('secret')) {
+    localStorage.removeItem('secret');
+    window.location.href = "/login";
+  } else {
+    store.showSnackbar("Failed to log out! Make sure authentication is enabled on the server side.", "error");
+  }
+
 }
 
 const force_refresh = () => {

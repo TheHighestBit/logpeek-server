@@ -1,5 +1,5 @@
 use axum::{Router, routing::get};
-use axum::middleware::{from_fn, from_fn_with_state};
+use axum::middleware::{from_fn_with_state};
 use log::info;
 use index::index_handler;
 use dashboard_info::dashboard_info_handler;
@@ -25,7 +25,7 @@ pub async fn router_setup(shared_state: SharedState) -> Router {
         .route("/api/sysinfo", get(sysinfo_handler))
         .with_state(shared_state.clone());
 
-    if !SETTINGS.read().await.get_string("main.secret").unwrap_or("".to_string()).is_empty() {
+    if !SETTINGS.read().await.get_string("main.secret").unwrap_or_else(|_| "".to_string()).is_empty() {
         info!("Authentication enabled");
         router = router.layer(from_fn_with_state(shared_state, middleware::authentication_middleware));
     }

@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use axum::body::Body;
 use axum::extract::{Request, State};
@@ -7,9 +6,8 @@ use axum::middleware::Next;
 use axum::response::Response;
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
-use log::{debug, error, info, warn};
-use ringbuffer::RingBuffer;
-use tokio::sync::Mutex;
+use log::{debug, error, warn};
+
 use crate::{SETTINGS, SharedState};
 use crate::log_reader::load_logs;
 
@@ -63,7 +61,7 @@ pub async fn buffer_refresh_middleware(State(shared_state): State<SharedState>, 
     let update_cooldown = Duration::from_secs(SETTINGS.read().await.get_int("main.buffer_update_cooldown").unwrap_or(10) as u64);
 
     // force-refresh header is only set by the force refresh button in the frontend
-    if req.headers().contains_key("force-refresh") || last_buffer_update.elapsed().unwrap_or(Duration::from_secs(15)) > update_cooldown {
+    if req.headers().contains_key("force-refresh") || last_buffer_update.elapsed().unwrap_or_else(|_| Duration::from_secs(15)) > update_cooldown {
         load_logs(shared_state.log_buffer.clone(), shared_state.cache.clone()).await;
         *last_buffer_update = SystemTime::now();
 

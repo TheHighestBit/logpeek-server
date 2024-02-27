@@ -47,7 +47,7 @@ pub async fn sysinfo_handler(State(shared_state): State<SharedState>) -> (Status
         uptime = Duration::seconds(System::uptime() as i64);
     }
 
-    let server_uptime = shared_state.server_start_time.elapsed().unwrap_or(core::time::Duration::new(0, 0)).as_secs();
+    let server_uptime = shared_state.server_start_time.elapsed().unwrap_or_else(|_| core::time::Duration::new(0, 0)).as_secs();
 
     (StatusCode::OK, Json(SystemInfoResponse {
         memory_usage,
