@@ -15,7 +15,6 @@ log = { version = "0.4.20", features = ["serde"] }
 logpeek = { path = "C:/Users/joose/Desktop/logpeek" }
 mime_guess = "2.0.4"
 regex = "1.10.2"
-rev_lines = "0.3.0"
 ringbuffer = "0.15.0"
 rust-embed = "8.2.0"
 serde = { version = "1.0.193", features = ["derive"] }
@@ -23,6 +22,5 @@ sysinfo = "0.30.5"
 thiserror = "1.0.56"
 time = { version = "0.3.31", features = ["parsing", "serde"] }
 tokio = { version = "1.35.1", features = ["macros", "rt-multi-thread"] }
-tower-http = { version = "0.5.0", features = ["cors", "add-extension"] }
 base64 = "0.21.7"
 axum-server = { version = "0.6.0", features = ["tls-rustls"] }
