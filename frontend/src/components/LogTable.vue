@@ -16,7 +16,7 @@
           </template>
         </VueDatePicker>
       </v-col>
-      <v-col sm="2" lg="1">
+      <v-col sm="2" md="2" lg="1">
         <v-select v-model="min_log_level_filter" clearable variant="outlined" label="Min log level"
                   :items="['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR']" density="compact"></v-select>
       </v-col>
@@ -36,8 +36,8 @@
                     :items="module_history"
                     density="compact"></v-combobox>
       </v-col>
-      <v-col sm="2" lg="1" align="end">
-        <v-btn class="mr-5 mb-n3" color="#6716bd" variant="elevated" :onclick="refresh_table">Refresh</v-btn>
+      <v-col class="mr-5" sm="2" lg="1" align="end">
+        <v-btn class="mb-n3" color="#6716bd" variant="elevated" :onclick="refresh_table">Refresh</v-btn>
       </v-col>
     </v-row>
     <v-divider class="border-opacity-50"></v-divider>

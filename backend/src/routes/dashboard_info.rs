@@ -1,5 +1,5 @@
-use std::collections::{BTreeMap};
-use axum::{Json};
+use std::collections::BTreeMap;
+use axum::Json;
 use axum::extract::State;
 use log::trace;
 
@@ -7,7 +7,7 @@ use ringbuffer::RingBuffer;
 use serde::Serialize;
 
 
-use crate::{SharedState};
+use crate::SharedState;
 
 #[derive(Serialize)]
 pub struct DashboardResponse {

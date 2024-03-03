@@ -1,7 +1,7 @@
 <template>
   <v-card :title="props.card_title" rounded="0" class="pl-3 pr-3 pb-3">
     <VueUiSparkbar
-      v-if="props.data"
+      v-if="props.data.length > 0"
       :config="config"
       :dataset="dataset"
     ></VueUiSparkbar>
@@ -13,9 +13,14 @@
 import {VueUiSparkbar, VueUiSparkbarConfig, VueUiSparkbarDatasetItem} from "vue-data-ui";
 import {computed, PropType, ref} from "vue";
 
-const props = defineProps({
-  card_title: String,
-  data: Array as PropType<[string, number][]>,
+interface Props {
+  card_title: string;
+  data: [string, number][];
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  card_title: "Error count by module",
+  data: () => []
 });
 
 const config = ref<VueUiSparkbarConfig>({

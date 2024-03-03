@@ -31,7 +31,8 @@ pub fn parse_entry(line: &str, parser_re: &Regex, timeformat: &TimeFormat) -> Re
             timestamp: match timeformat {
                 TimeFormat::Iso8601 => OffsetDateTime::parse(timestamp, &Iso8601::DEFAULT)?,
                 TimeFormat::Rfc2822 => OffsetDateTime::parse(timestamp, &time::format_description::well_known::Rfc2822)?,
-                TimeFormat::Rfc3339 => OffsetDateTime::parse(timestamp, &time::format_description::well_known::Rfc3339)?
+                TimeFormat::Rfc3339 => OffsetDateTime::parse(timestamp, &time::format_description::well_known::Rfc3339)?,
+                TimeFormat::Custom(format_desc) => OffsetDateTime::parse(timestamp, &format_desc)?,
             },
             level: log::Level::from_str(level)?,
             module: module.to_string(),

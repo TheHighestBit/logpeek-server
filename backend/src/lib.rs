@@ -50,12 +50,12 @@ lazy_static! {
 pub async fn run() {
     // Logger setup
     let logger_config = logpeek::config::Config {
-        datetime_format: logpeek::config::DateTimeFormat::ISO8601,
+        datetime_format: logpeek::config::DateTimeFormat::Custom("[year]-[month]-[day]|[hour]:[minute]:[second]|[offset_hour sign:mandatory]:[offset_minute]:[offset_second]"),
         min_log_level: match SETTINGS.read().await.get_bool("main.logger.debug").unwrap_or(false) {
             true => LevelFilter::Debug,
             false => LevelFilter::Info
         },
-        out_dir_name: logpeek::config::OutputDirName::Custom(SETTINGS.read().await.get_string("main.logger.log_dir").unwrap_or_else(|_| "logpeek-logs".to_string())),
+        out_dir_name: logpeek::config::OutputDirName::Custom(SETTINGS.read().await.get_string("main.logger.log_path").unwrap_or_else(|_| "logpeek-logs".to_string())),
         logging_mode: match SETTINGS.read().await.get_bool("main.logger.log_to_file").unwrap_or(true) {
             true => LoggingMode::FileAndConsole,
             false => LoggingMode::Console

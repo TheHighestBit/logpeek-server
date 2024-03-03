@@ -2,7 +2,8 @@ mod parser;
 
 
 use ringbuffer::{AllocRingBuffer, RingBuffer};
-use std::{fs::File};
+use time::format_description::{self, FormatItem};
+use std::fs::File;
 use std::collections::HashMap;
 use std::fs::metadata;
 use std::io::{BufRead, BufReader};
@@ -16,10 +17,11 @@ use tokio::sync::{Mutex, RwLock};
 use crate::LogEntry;
 use crate::SETTINGS;
 
-pub enum TimeFormat {
+pub enum TimeFormat<'a> {
     Iso8601,
     Rfc3339,
     Rfc2822,
+    Custom(Vec<FormatItem<'a>>), 
 }
 
 pub async fn load_logs(buffer: Arc<RwLock<AllocRingBuffer<LogEntry>>>, cache: Arc<Mutex<HashMap<String, (std::time::SystemTime, usize)>>>) {
@@ -46,18 +48,25 @@ pub async fn load_logs(buffer: Arc<RwLock<AllocRingBuffer<LogEntry>>>, cache: Ar
             .into_string()
             .expect("Parser is not a string!")).expect("Failed to compile regex!");
 
-        let app_timeformat = match app_table
+
+        let configured_timeformat = app_table
             .get("timeformat")
             .expect("An application is missing the timeformat field in the config!")
             .clone()
             .into_string()
-            .expect("Timeformat is not a string!")
-            .as_str() {
-            "iso8601" => TimeFormat::Iso8601,
-            "rfc3339" => TimeFormat::Rfc3339,
-            "rfc2822" => TimeFormat::Rfc2822,
-            _ => panic!("Invalid timeformat!"),
+            .expect("Timeformat is not a string!");
+        
+
+        let app_timeformat = match configured_timeformat.as_str() {
+        "iso8601" => TimeFormat::Iso8601,
+        "rfc3339" => TimeFormat::Rfc3339,
+        "rfc2822" => TimeFormat::Rfc2822,
+        custom_format_str => {
+            let format_desc = format_description::parse_borrowed::<1>(custom_format_str).expect("Invalid custom time format!");
+            TimeFormat::Custom(format_desc)
+        },
         };
+
 
         for log_file in glob(format!("{}/*.log", app_path).as_str()).expect("Failed to read glob pattern") {
             match log_file {

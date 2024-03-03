@@ -9,7 +9,7 @@ allow_dirty_pagination = false # When true, paginating filtered logs will use th
 [main.logger]
 debug = false # When true, sets the minimum log level to debug
 log_to_file = true # When true, logs will be written to a file
-log_path = "logpeek-logs" # When log_to_file is true, logs will be written to this directory
+log_path = "testing-timeformat" # When log_to_file is true, logs will be written to this directory
 
 [https]
 enabled = false # When true, the server will use HTTPS
@@ -19,9 +19,10 @@ key = "certs/localhost-key.pem" # The path to the key file, must be in PEM forma
 [[application]]
 path = "logpeek-logs" # Path to the application's log folder
 parser = '''^(?P<timestamp>\S+) (?P<level>\S+) (?P<module>\S+) - (?P<message>.+)$''' # The regular expression used to parse the logs files of this application
-timeformat = "iso8601" # The format of the timestamp in the logs. Supported formats are "iso8601", "rfc3339" and "rfc2822"
-#
-#[[application]]
-#path = "path/to/app2" # The path to the app
-#parser = "12345"
-#timeformat = "rfc3339"
+timeformat = "iso8601" # The format of the timestamp in the logs. Supported formats are "iso8601", "rfc3339", "rfc2822" and custom.
+
+
+[[application]]
+path = "testing-timeformat"
+parser = '''^(?P<timestamp>\S+) (?P<level>\S+) (?P<module>\S+) - (?P<message>.+)$'''
+timeformat = "[year]-[month]-[day]|[hour]:[minute]:[second]|[offset_hour sign:mandatory]:[offset_minute]:[offset_second]"
