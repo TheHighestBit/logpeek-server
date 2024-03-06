@@ -33,7 +33,7 @@ Requirements (earlier versions will most likely work fine as well):
 git clone https://github.com/TheHighestBit/logpeek-server
 cd logpeek-server/frontend
 npm install
-npm build
+npm run build
 cd ../backend
 cargo build --release
 ```
