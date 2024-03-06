@@ -12,7 +12,7 @@ config = { version = "0.14.0", features = ["toml"] }
 glob = "0.3.1"
 lazy_static = "1.4.0"
 log = { version = "0.4.20", features = ["serde"] }
-logpeek = { path = "C:/Users/joose/Desktop/logpeek" }
+logpeek = "0.1.0"
 mime_guess = "2.0.4"
 regex = "1.10.2"
 ringbuffer = "0.15.0"

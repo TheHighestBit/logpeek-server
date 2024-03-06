@@ -13,7 +13,7 @@ use crate::log_reader::load_logs;
 
 pub async fn authentication_middleware(State(shared_state): State<SharedState>, req: Request<Body>, next: Next) -> Result<Response, StatusCode> {
     let mut login_attempts = shared_state.login_attempts.lock().await;
-    let max_login_attempts = SETTINGS.read().await.get_int("main.max_login_attempts").unwrap_or(5) as u32;
+    let max_login_attempts = SETTINGS.read().await.get_int("main.max_login_attempts").unwrap_or(3) as u32;
     
     if *login_attempts >= max_login_attempts {
         warn!("Server locked due to too many failed login attempts. Manual restart required.");

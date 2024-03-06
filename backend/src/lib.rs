@@ -50,7 +50,6 @@ lazy_static! {
 pub async fn run() {
     // Logger setup
     let logger_config = logpeek::config::Config {
-        datetime_format: logpeek::config::DateTimeFormat::Custom("[year]-[month]-[day]|[hour]:[minute]:[second]|[offset_hour sign:mandatory]:[offset_minute]:[offset_second]"),
         min_log_level: match SETTINGS.read().await.get_bool("main.logger.debug").unwrap_or(false) {
             true => LevelFilter::Debug,
             false => LevelFilter::Info
@@ -100,7 +99,7 @@ pub async fn run() {
         let tls_config = RustlsConfig::from_pem_file(
             SETTINGS.read().await.get_string("https.cert").expect("Failed to read https.cert"),
             SETTINGS.read().await.get_string("https.key").expect("Failed to read https.key"),
-        ).await.expect("Failed to create TLS config");
+        ).await.expect("Failed to create TLS config! Most likely there is an issue with the certificate or key file.");
 
         info!("Listening on https://{}", &host_address);
 

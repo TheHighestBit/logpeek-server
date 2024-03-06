@@ -139,7 +139,7 @@ fn create_default_map() -> ValueKind {
     warn!("No application configurations found, proceeding with defaults.");
     
     let mut map = HashMap::new();
-    map.insert("path".to_string(), Value::new(None, ValueKind::String("logs".to_string())));
+    map.insert("path".to_string(), Value::new(None, ValueKind::String("logpeek-logs".to_string())));
     map.insert("parser".to_string(), Value::new(None, ValueKind::String(r"^(?P<timestamp>\S+) (?P<level>\S+) (?P<module>\S+) - (?P<message>.+)$".to_string())));
     map.insert("timeformat".to_string(), Value::new(None, ValueKind::String("iso8601".to_string())));
 
