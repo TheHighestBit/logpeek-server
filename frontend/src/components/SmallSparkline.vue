@@ -2,8 +2,10 @@
   <VueUiSparkline
     :config="config"
     :dataset="dataset"
+    @selectDatapoint="selectDatapoint"
   ></VueUiSparkline>
-</template> `
+</template>
+`
 
 <script lang="ts" setup>
 import { computed } from "vue";
@@ -63,14 +65,23 @@ const dataset = computed(() => {
 
     if (!props.is_week) {
       const currentHour = currentDate.getHours();
-      const currentMinute = currentDate.getMinutes().toString().padStart(2, "0");
+      const currentMinute = currentDate
+        .getMinutes()
+        .toString()
+        .padStart(2, "0");
 
       for (let i = props.data.length - 1; i >= 0; i--) {
-        const displayHourStart = ((currentHour - i + 23) % 24).toString().padStart(2, "0");
-        const displayHourEnd = ((currentHour - i + 24) % 24).toString().padStart(2, "0");
+        const displayHourStart = ((currentHour - i + 23) % 24)
+          .toString()
+          .padStart(2, "0");
+        const displayHourEnd = ((currentHour - i + 24) % 24)
+          .toString()
+          .padStart(2, "0");
 
         dataset.push({
-          period: `${i + 1} hours ago, ${displayHourStart}:${currentMinute} - ${displayHourEnd}:${currentMinute} LOCAL`,
+          period: `${
+            i + 1
+          } hours ago, ${displayHourStart}:${currentMinute} - ${displayHourEnd}:${currentMinute} LOCAL`,
           value: props.data[i],
         });
       }
@@ -92,7 +103,7 @@ const dataset = computed(() => {
       dataset.push({
         period: "Today",
         value: props.data[0],
-      })
+      });
 
       return dataset;
     }
@@ -100,4 +111,14 @@ const dataset = computed(() => {
 
   return [];
 });
+
+function selectDatapoint({
+  datapoint,
+  index,
+}: {
+  datapoint: VueUiSparklineDatasetItem;
+  index: number;
+}) {
+  console.log({ datapoint, index });
+}
 </script>

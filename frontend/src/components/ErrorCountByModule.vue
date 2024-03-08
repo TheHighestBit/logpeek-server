@@ -4,14 +4,19 @@
       v-if="props.data.length > 0"
       :config="config"
       :dataset="dataset"
+      @selectDatapoint="selectDatapoint"
     ></VueUiSparkbar>
     <v-card-subtitle v-else>No errors</v-card-subtitle>
   </v-card>
 </template>
 
 <script setup lang="ts">
-import {VueUiSparkbar, VueUiSparkbarConfig, VueUiSparkbarDatasetItem} from "vue-data-ui";
-import {computed, PropType, ref} from "vue";
+import {
+  VueUiSparkbar,
+  VueUiSparkbarConfig,
+  VueUiSparkbarDatasetItem,
+} from "vue-data-ui";
+import { computed, PropType, ref } from "vue";
 
 interface Props {
   card_title: string;
@@ -20,22 +25,24 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   card_title: "Error count by module",
-  data: () => []
+  data: () => [],
 });
 
 const config = ref<VueUiSparkbarConfig>({
   style: {
     fontFamily: "inherit",
-    layout: {independant: true, percentage: true, target: 0},
-    gutter: {backgroundColor: "#3A3A3A", opacity: 100},
-    bar: {gradient: {show: true, intensity: 40, underlayerColor: "#FFFFFF"}},
+    layout: { independant: true, percentage: true, target: 0 },
+    gutter: { backgroundColor: "#3A3A3A", opacity: 100 },
+    bar: {
+      gradient: { show: true, intensity: 40, underlayerColor: "#FFFFFF" },
+    },
     labels: {
       fontSize: 16,
-      name: {position: "top", width: "100%", color: "#BABABA", bold: false},
-      value: {show: true, bold: true}
+      name: { position: "top", width: "100%", color: "#BABABA", bold: false },
+      value: { show: true, bold: true },
     },
-    gap: 4
-  }
+    gap: 4,
+  },
 });
 
 const dataset = computed(() => {
@@ -46,7 +53,7 @@ const dataset = computed(() => {
       dataset.push({
         name: item[0],
         value: item[1],
-        suffix: "%"
+        suffix: "%",
       });
     }
 
@@ -56,8 +63,15 @@ const dataset = computed(() => {
   return [];
 });
 
+function selectDatapoint({
+  datapoint,
+  index,
+}: {
+  datapoint: VueUiSparkbarDatasetItem;
+  index: number;
+}) {
+  console.log({ datapoint, index });
+}
 </script>
 
-<style scoped>
-
-</style>
+<style scoped></style>
