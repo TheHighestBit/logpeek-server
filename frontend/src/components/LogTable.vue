@@ -77,6 +77,8 @@ import {LogTableResponse} from "@/interfaces/LogTableResponse";
 import {endOfMonth, endOfYear, startOfMonth, startOfYear, subMonths, subDays} from 'date-fns';
 import {fetchWithAuth} from "@/utils";
 import {useAppStore} from "@/store/app";
+import router from "@/router";
+import {useRoute} from "vue-router";
 
 const items = ref<LogEntry[]>([]);
 const store = useAppStore();
@@ -120,6 +122,22 @@ onMounted(() => {
   window.addEventListener('keydown', enter_pressed);
 
   loadFromHistory();
+
+  // These parameters are set when the user clicks on a particular timeframe in the dashboard
+  const route = useRoute();
+
+  if (route.query.dateStart && route.query.dateEnd && route.query.type) {
+    date_range_filter.value = [new Date(route.query.dateStart as string), new Date(route.query.dateEnd as string)];
+
+    if (route.query.type === "error") {
+      min_log_level_filter.value = "ERROR";
+    } else if (route.query.type === "warning") {
+      min_log_level_filter.value = "WARN";
+    }
+
+    router.replace({query: {}});
+    refresh_table();
+  }
 });
 
 onBeforeUnmount(() => {
@@ -140,10 +158,10 @@ const load = async ({page, itemsPerPage}: { page: number, itemsPerPage: number }
   });
 
   if (date_range_filter.value !== null && date_range_filter.value.length > 0) {
-    search_params.append("start_timestamp", date_range_filter.value[0].toString());
+    search_params.append("start_timestamp", date_range_filter.value[0].toISOString());
 
     if (date_range_filter.value[1] !== null) {
-      search_params.append("end_timestamp", date_range_filter.value[1].toString());
+      search_params.append("end_timestamp", date_range_filter.value[1].toISOString());
     } else {
       search_params.append("end_timestamp", new Date().toISOString());
     }

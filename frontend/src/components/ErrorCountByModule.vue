@@ -26,6 +26,7 @@ const props = withDefaults(defineProps<Props>(), {
 const config = ref<VueUiSparkbarConfig>({
   style: {
     fontFamily: "inherit",
+    backgroundColor: "#212121",
     layout: {independant: true, percentage: true, target: 0},
     gutter: {backgroundColor: "#3A3A3A", opacity: 100},
     bar: {gradient: {show: true, intensity: 40, underlayerColor: "#FFFFFF"}},

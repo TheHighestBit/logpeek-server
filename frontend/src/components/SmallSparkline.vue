@@ -2,6 +2,7 @@
   <VueUiSparkline
     :config="config"
     :dataset="dataset"
+    @selectDatapoint="selectDatapoint"
   ></VueUiSparkline>
 </template> `
 
@@ -14,11 +15,13 @@ import {
   type VueUiSparklineConfig,
   type VueUiSparklineDatasetItem,
 } from "vue-data-ui";
+import router from "@/router";
 
 const props = defineProps({
   bar_color: String,
   sparkbar_title: String,
   is_week: Boolean,
+  type: String,
   data: Array as PropType<number[]>,
 });
 
@@ -100,4 +103,26 @@ const dataset = computed(() => {
 
   return [];
 });
+
+function selectDatapoint({ index }: {datapoint: VueUiSparklineDatasetItem; index: number;}) {
+  let dateStart = new Date();
+  let dateEnd = new Date();
+
+  if (props.is_week) {
+    dateStart.setDate(dateStart.getDate() - (7 - index));
+    dateEnd.setDate(dateEnd.getDate() - (6 - index));
+  } else {
+    dateStart.setHours(dateStart.getHours() - (24 - index));
+    dateEnd.setHours(dateEnd.getHours() - (23 - index));
+  }
+
+  router.push({
+    name: "LogTable",
+    query: {
+      dateStart: dateStart.toISOString(),
+      dateEnd: dateEnd.toISOString(),
+      type: props.type,
+    },
+  });
+}
 </script>

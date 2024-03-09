@@ -5,15 +5,15 @@
     </v-row>
     <v-row>
       <v-col cols="5">
-        <SmallSparkline :bar_color="colors.log_error" :data="dashboard_info.error_logs_24" :is_week="false" sparkbar_title="24h Error count"></SmallSparkline>
-        <SmallSparkline :bar_color="colors.log_warning" :data="dashboard_info.warning_logs_24" :is_week="false" sparkbar_title="24h Warning count"></SmallSparkline>
-        <SmallSparkline :bar_color="colors.primary" :data="dashboard_info.total_logs_24" :is_week="false" sparkbar_title="24h Total Log count"></SmallSparkline>
+        <SmallSparkline :bar_color="colors.log_error" :data="dashboard_info.error_logs_24" :is_week="false" sparkbar_title="24h Error count" type="error"></SmallSparkline>
+        <SmallSparkline :bar_color="colors.log_warning" :data="dashboard_info.warning_logs_24" :is_week="false" sparkbar_title="24h Warning count" type="warning"></SmallSparkline>
+        <SmallSparkline :bar_color="colors.primary" :data="dashboard_info.total_logs_24" :is_week="false" sparkbar_title="24h Total Log count" type="total"></SmallSparkline>
         <ErrorCountByModule :data="dashboard_info.top_modules_24" card_title="24h errors by module"></ErrorCountByModule>
       </v-col>
       <v-col cols="5">
-        <SmallSparkline :bar_color="colors.log_error" :data="dashboard_info.error_logs_week" :is_week="true" sparkbar_title="7d Error count"></SmallSparkline>
-        <SmallSparkline :bar_color="colors.log_warning" :data="dashboard_info.warning_logs_week" :is_week="true" sparkbar_title="7d Warning count"></SmallSparkline>
-        <SmallSparkline :bar_color="colors.primary" :data="dashboard_info.total_logs_week" :is_week="true" sparkbar_title="7d Total Log count"></SmallSparkline>
+        <SmallSparkline :bar_color="colors.log_error" :data="dashboard_info.error_logs_week" :is_week="true" sparkbar_title="7d Error count" type="error"></SmallSparkline>
+        <SmallSparkline :bar_color="colors.log_warning" :data="dashboard_info.warning_logs_week" :is_week="true" sparkbar_title="7d Warning count" type="warning"></SmallSparkline>
+        <SmallSparkline :bar_color="colors.primary" :data="dashboard_info.total_logs_week" :is_week="true" sparkbar_title="7d Total Log count" type="total"></SmallSparkline>
         <ErrorCountByModule :data="dashboard_info.top_modules_week" card_title="7d errors by module"></ErrorCountByModule>
       </v-col>
       <v-col>
