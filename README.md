@@ -77,10 +77,6 @@ Environment variables take precedence over the `config.toml` file.
 The main reason this isn't implemented already is that the config library that is being used doesn't support writing to the config file and some refactoring might be necessary.
 
 
- - [ ] **Make dashboard elements redirect to the log table with appropriate filters applied.** E.g. if the user sees that 5 hrs ago there was a spike of warnings, entering these filters into the log table manually
-is quite inconvenient. Instead, clicking on that column should do that automatically. The problem is that the current dashboard component doesn't expose any onClick events, so some hacking might be required.
-
-
 - [ ] **Caching for the log table.** Currently, caching is only used to skip reading already processed log entries. It would be nice to also cache the total number of logs for each filter configuration,
 so that we wouldn't have to go through the entire buffer every time.
 
