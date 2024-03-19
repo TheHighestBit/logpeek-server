@@ -72,17 +72,17 @@ Environment variables can be used as well, by prefixing them with `LOGPEEK_`.
 
 Environment variables take precedence over the `config.toml` file.
 
-### Potential improvements
- - [ ] **Improve configuration.** Using a .toml file like this is not very user-friendly. There should be a page in the frontend that would allow the user to edit the config more conveniently.
+### Features planned for v0.2.0 release
+- [x] ~~**Make dashboard elements redirect to the log table with appropriate filters applied.** E.g. if the user sees that 5 hrs ago there was a spike of warnings, entering these filters into the log table manually
+  is quite inconvenient. Instead, clicking on that column should do that automatically. The problem is that the current dashboard component doesn't expose any onClick events, so some hacking might be required.~~ 
+
+
+- [ ] **Improve configuration.** Using a .toml file like this is not very user-friendly. There should be a page in the frontend that would allow the user to edit the config more conveniently.
 The main reason this isn't implemented already is that the config library that is being used doesn't support writing to the config file and some refactoring might be necessary.
 
 
-- [ ] **Caching for the log table.** Currently, caching is only used to skip reading already processed log entries. It would be nice to also cache the total number of logs for each filter configuration,
-so that we wouldn't have to go through the entire buffer every time.
-
-
-- [ ] **Separate log buffers for each application.** At the moment, all logs are kept in the same buffer, meaning the only thing separating applications is the module name in the logs.
-Instead, there should be a separate buffer for each application, which would allow for more efficient and user-friendly filtering.
+- [ ] **Add the option to filter by application.** This would be useful for both the dashboard and the table, implemented as a dropdown menu. Easiest way is to add a field to the log entry
+struct and use that to filter.
 
 ## License
 
