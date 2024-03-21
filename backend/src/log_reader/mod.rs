@@ -7,7 +7,7 @@ use std::fs::File;
 use std::collections::HashMap;
 use std::fs::metadata;
 use std::io::{BufRead, BufReader};
-use log::{error, warn};
+use log::{error, trace, warn};
 use std::sync::Arc;
 use config::{Value, ValueKind};
 use glob::glob;
@@ -24,10 +24,12 @@ pub enum TimeFormat<'a> {
     Custom(Vec<FormatItem<'a>>), 
 }
 
-pub async fn load_logs(buffer: Arc<RwLock<AllocRingBuffer<LogEntry>>>, cache: Arc<Mutex<HashMap<String, (std::time::SystemTime, usize)>>>) {
+pub async fn load_logs(buffer: Arc<RwLock<AllocRingBuffer<LogEntry>>>, cache: Arc<Mutex<HashMap<String, (std::time::SystemTime, usize)>>>, i_to_app: Arc<Mutex<HashMap<usize, String>>>) {
     let mut log_buffer = buffer.write().await;
     let mut log_files = Vec::new();
     let mut cache = cache.lock().await;
+    let mut i_to_app = i_to_app.lock().await;
+    let mut app_i;
 
     let apps = SETTINGS.read().await.get_array("application").unwrap_or_else(|_| vec![Value::new(None, create_default_map())]);
     
@@ -40,6 +42,14 @@ pub async fn load_logs(buffer: Arc<RwLock<AllocRingBuffer<LogEntry>>>, cache: Ar
             .clone()
             .into_string()
             .expect("Path is not a string!");
+        
+        if !i_to_app.values().any(|app_name| app_name == &app_path) {
+            let length = i_to_app.len();
+            app_i = length;
+            i_to_app.insert(length, app_path.clone());
+        } else {
+            app_i = *i_to_app.iter().find(|(_, app_name)| app_name == &&app_path).unwrap().0;
+        }
 
         let app_parser = Regex::new(&app_table
             .get("parser")
@@ -100,8 +110,11 @@ pub async fn load_logs(buffer: Arc<RwLock<AllocRingBuffer<LogEntry>>>, cache: Ar
             for (i, line) in reader.lines().skip(lines_to_skip).enumerate() {
                 match line {
                     Ok(line) => {
-                        match parser::parse_entry(&line, &app_parser, &app_timeformat) {
-                            Ok(parse_result) => log_buffer.push(parse_result),
+                        match parser::parse_entry(&line, &app_parser, &app_timeformat, app_i) {
+                            Ok(parse_result) => {
+                                trace!("{:?}", parse_result);
+                                log_buffer.push(parse_result);
+                            },
                             Err(err) => {
                                 error!("{} on line {} in file {}", err, i + 1, log_file.0.to_str().unwrap());
                             }

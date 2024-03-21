@@ -158,13 +158,22 @@ const load = async ({page, itemsPerPage}: { page: number, itemsPerPage: number }
   });
 
   if (date_range_filter.value !== null && date_range_filter.value.length > 0) {
-    search_params.append("start_timestamp", date_range_filter.value[0].toISOString());
+    // For whatever reason the datepicker returns a string instead of a Date object when using user selected date.
+    // For the preset dates it returns a Date object, so we need to convert here.
+    let start_date = date_range_filter.value[0];
+    let end_date = date_range_filter.value[1] !== null ? date_range_filter.value[1] : new Date();
 
-    if (date_range_filter.value[1] !== null) {
-      search_params.append("end_timestamp", date_range_filter.value[1].toISOString());
-    } else {
-      search_params.append("end_timestamp", new Date().toISOString());
+    console.log(typeof start_date);
+    if (typeof start_date === "string") {
+      start_date = new Date(start_date);
     }
+
+    if (typeof end_date === "string") {
+      end_date = new Date(end_date);
+    }
+
+    search_params.append("start_timestamp", start_date.toISOString());
+    search_params.append("end_timestamp", end_date.toISOString());
   }
 
   if (min_log_level_filter.value) {

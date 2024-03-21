@@ -1,13 +1,18 @@
 use std::collections::BTreeMap;
-use axum::Json;
+
 use axum::extract::State;
-use log::trace;
-
+use axum::Json;
+use axum_extra::extract::Query;
+use log::{debug, trace};
 use ringbuffer::RingBuffer;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
+use crate::{convert_app_to_i, SharedState};
 
-use crate::SharedState;
+#[derive(Debug, Deserialize)]
+pub struct Params {
+    applications: Option<Vec<String>>,
+}
 
 #[derive(Serialize)]
 pub struct DashboardResponse {
@@ -23,8 +28,16 @@ pub struct DashboardResponse {
     total_log_entries: u32,
 }
 
-pub async fn dashboard_info_handler(State(shared_state): State<SharedState>) -> Json<DashboardResponse> {
-    trace!("Request received");
+pub async fn dashboard_info_handler(Query(params): Query<Params>, State(shared_state): State<SharedState>) -> Json<DashboardResponse> {
+    trace!("Request received {:?}", params);
+
+    let applications = if let Some(param_applications) = &params.applications {
+        convert_app_to_i(param_applications, &shared_state.i_to_app.lock().await)
+    } else {
+        Vec::new()
+    };
+
+    debug!("Applications filter after conversion: {:?}", applications);
     
     let log_array = shared_state.log_buffer.read().await;
     let current_time = time::OffsetDateTime::now_utc();
@@ -38,7 +51,11 @@ pub async fn dashboard_info_handler(State(shared_state): State<SharedState>) -> 
     let mut top_modules_24: Vec<(String, u32)> = Vec::new();
     let mut flag_24 = false;
 
-    for entry in log_array.iter().rev().take_while(|entry| entry.timestamp > current_time - time::Duration::days(7)) {
+    for entry in log_array
+        .iter()
+        .rev()
+        .filter(|entry| applications.is_empty() || applications.contains(&entry.application))
+        .take_while(|entry| entry.timestamp > current_time - time::Duration::days(7)) {
         if entry.timestamp > current_time - time::Duration::hours(24) {
             let hour: usize = (current_time - entry.timestamp).whole_hours() as usize;
             match entry.level {

@@ -3,14 +3,15 @@ use std::{str::FromStr, fmt};
 use anyhow::Result;
 use log::{error, trace};
 use serde::{Deserialize, Deserializer, de, Serialize};
-use axum::{extract::Query, Json};
+use axum::Json;
 use axum::extract::State;
+use axum_extra::extract::Query;
 use axum::http::StatusCode;
 use ringbuffer::{RingBuffer};
 use time::OffsetDateTime;
 
 
-use crate::{LogEntry, SETTINGS, SharedState};
+use crate::{convert_app_to_i, LogEntry, SETTINGS, SharedState};
 
 #[derive(Debug, Deserialize)]
 pub struct Params {
@@ -26,6 +27,7 @@ pub struct Params {
     start_timestamp: Option<String>,
     #[serde(default, deserialize_with = "empty_string_as_none")]
     end_timestamp: Option<String>,
+    applications: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -43,10 +45,11 @@ struct LogFilter {
     message: Option<regex::Regex>,
     start_timestamp: Option<OffsetDateTime>,
     end_timestamp: Option<OffsetDateTime>,
+    applications: Vec<usize>,
 }
 
 impl LogFilter {
-    fn new(params: &Params) -> Result<Self> {
+    async fn new(params: Params, shared_state: &SharedState) -> Result<Self> {
         let Params {
             page,
             items_per_page,
@@ -55,11 +58,10 @@ impl LogFilter {
             message,
             start_timestamp,
             end_timestamp,
+            applications,
         } = params;
 
-        let index = (*page - 1) * *items_per_page;
-
-        let min_log_level = *min_log_level;
+        let index = (page - 1) * items_per_page;
 
         let module_name = module_name.as_ref().map(|module_name| {
             regex::Regex::new(module_name)
@@ -77,14 +79,21 @@ impl LogFilter {
             OffsetDateTime::parse(end_timestamp, &time::format_description::well_known::Iso8601::DEFAULT)
         }).transpose()?;
 
+        let applications = if let Some(param_applications) = applications {
+            convert_app_to_i(&param_applications, &shared_state.i_to_app.lock().await)
+        } else {
+            Vec::new()
+        };
+
         Ok(Self {
             index,
-            items_per_page: *items_per_page,
+            items_per_page,
             min_log_level,
             module_name,
             message,
             start_timestamp,
             end_timestamp,
+            applications
         })
     }
     fn matches(&self, entry: &LogEntry) -> bool {
@@ -118,14 +127,18 @@ impl LogFilter {
             }
         }
 
+        if !self.applications.is_empty() && !self.applications.contains(&entry.application) {
+            return false;
+        }
+
         true
     }
 }
 
 pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state): State<SharedState>) -> (StatusCode, Json<LogTableResponse>) {
-    trace!("Request received {:?}", params);
+    trace!("Request received {:?}", &params);
 
-    let log_filter_result = LogFilter::new(&params);
+    let log_filter_result = LogFilter::new(params, &shared_state).await;
 
     match log_filter_result {
         Ok(log_filter) => {
@@ -153,7 +166,7 @@ pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state)
             }))
         },
         Err(err) => {
-            error!("Error parsing log filter: {} with params: {:?}", err, params);
+            error!("Error parsing log filter: {}", err);
             (StatusCode::BAD_REQUEST, Json({
                 LogTableResponse {
                     total_items: 0,
@@ -165,7 +178,7 @@ pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state)
 }
 
 // Serde deserialization decorator to map empty Strings to None,
-fn empty_string_as_none<'de, D, T>(de: D) -> Result<Option<T>, D::Error>
+pub fn empty_string_as_none<'de, D, T>(de: D) -> Result<Option<T>, D::Error>
 where
     D: Deserializer<'de>,
     T: FromStr,

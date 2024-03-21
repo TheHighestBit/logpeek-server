@@ -4,6 +4,24 @@
       <SystemInfo></SystemInfo>
     </v-row>
     <v-row>
+      <v-btn-toggle
+        v-model="application"
+        background-color="primary"
+        multiple
+      >
+        <v-btn
+          v-for="app in application_list"
+          :key="app"
+          :value="app"
+        >
+          {{ app }}
+        </v-btn>
+      </v-btn-toggle>
+      <v-btn class="mb-3" :color="colors.primary" @click="refresh">
+        Refresh
+      </v-btn>
+    </v-row>
+    <v-row>
       <v-col cols="5">
         <SmallSparkline :bar_color="colors.log_error" :data="dashboard_info.error_logs_24" :is_week="false" sparkbar_title="24h Error count" type="error"></SmallSparkline>
         <SmallSparkline :bar_color="colors.log_warning" :data="dashboard_info.warning_logs_24" :is_week="false" sparkbar_title="24h Warning count" type="warning"></SmallSparkline>
@@ -44,6 +62,12 @@ const store = useAppStore();
 const dashboard_info: DashboardInfo = await fetchWithAuth("/api/dashboard_info").then((res) => res.json())
   .catch(() => {
     store.showSnackbar("Failed to fetch dashboard info", "error");
+  });
+
+const application = ref<string[]>();
+const application_list: string[] = await fetchWithAuth("/api/application_list").then((res) => res.json())
+  .catch(() => {
+    store.showSnackbar("Failed to fetch applications", "error");
   });
 
 const dataset = ref<VueUi3dBarDataset>({
@@ -93,5 +117,9 @@ const config = ref<VueUi3dBarConfig>({
   },
   userOptions: { show: false },
 });
+
+const refresh = () => {
+  console.log(application.value);
+}
 </script>
 

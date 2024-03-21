@@ -20,7 +20,7 @@ pub enum LogParseError {
     InvalidMessage(String),
 }
 
-pub fn parse_entry(line: &str, parser_re: &Regex, timeformat: &TimeFormat) -> Result<LogEntry> {
+pub fn parse_entry(line: &str, parser_re: &Regex, timeformat: &TimeFormat, app_i: usize) -> Result<LogEntry> {
     if let Some(caps) = parser_re.captures(line) {
         let timestamp = caps.name("timestamp").ok_or_else(|| LogParseError::InvalidTimestamp(line.to_string()))?.as_str();
         let level = caps.name("level").ok_or_else(|| LogParseError::InvalidLogLevel(line.to_string()))?.as_str();
@@ -37,6 +37,7 @@ pub fn parse_entry(line: &str, parser_re: &Regex, timeformat: &TimeFormat) -> Re
             level: log::Level::from_str(level)?,
             module: module.to_string(),
             message: message.to_string(),
+            application: app_i
         })
     } else {
         Err(LogParseError::NoCaptureGroupsFound(line.to_string()).into())
