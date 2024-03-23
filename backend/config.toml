@@ -3,8 +3,6 @@
 
 # General configuration options.
 [main]
-# The size of the log buffer that is kept in memory. When the buffer is full, the oldest logs are discarded first.
-buffer_size = 1_000_000
 
 # Host address of the server
 address = "127.0.0.1:3001"
@@ -17,10 +15,6 @@ max_login_attempts = 3
 
 # The amount of seconds to not read in new log entires into the buffer for incoming requests.
 buffer_update_cooldown = 10
-
-# When true, paginating filtered logs will use the total, unfiltered log count.
-# To get the total filtered log count, the entire buffer needs to be processed, which might be wasteful in performance critical circumstances.
-allow_dirty_pagination = false
 
 
 [main.logger]
@@ -60,6 +54,44 @@ parser = '''^(?P<timestamp>\S+) (?P<level>\S+) (?P<module>\S+) - (?P<message>.+)
 # Since UTC is used internally, the timeformat must include an offset. Minimum example for a custom timeformat: "[year]-[month]-[day]|[hour]|[offset_hour]"
 # Refer to https://time-rs.github.io/book/api/format-description.html (version 1) for possible options.
 timeformat = "iso8601"
+
+# The size of the log buffer that is kept in memory. When the buffer is full, the oldest logs are discarded first.
+buffer_size = 1_000_000
+
+
+[[application]]
+# Path to the application's log folder.
+path = "test1"
+
+# The regular expression used to parse the logs files of this application.
+# At the moment, all capture groups present in the example below must be included.
+parser = '''^(?P<timestamp>\S+) (?P<level>\S+) (?P<module>\S+) - (?P<message>.+)$'''
+
+# The format of the timestamp in the logs. Supported formats are "iso8601", "rfc3339", "rfc2822" and custom.
+# Altough custom timeformats are supported, built-in formats should be preferred.
+# Since UTC is used internally, the timeformat must include an offset. Minimum example for a custom timeformat: "[year]-[month]-[day]|[hour]|[offset_hour]"
+# Refer to https://time-rs.github.io/book/api/format-description.html (version 1) for possible options.
+timeformat = "iso8601"
+
+# The size of the log buffer that is kept in memory. When the buffer is full, the oldest logs are discarded first.
+buffer_size = 1_000_000
+
+[[application]]
+# Path to the application's log folder.
+path = "test2"
+
+# The regular expression used to parse the logs files of this application.
+# At the moment, all capture groups present in the example below must be included.
+parser = '''^(?P<timestamp>\S+) (?P<level>\S+) (?P<module>\S+) - (?P<message>.+)$'''
+
+# The format of the timestamp in the logs. Supported formats are "iso8601", "rfc3339", "rfc2822" and custom.
+# Altough custom timeformats are supported, built-in formats should be preferred.
+# Since UTC is used internally, the timeformat must include an offset. Minimum example for a custom timeformat: "[year]-[month]-[day]|[hour]|[offset_hour]"
+# Refer to https://time-rs.github.io/book/api/format-description.html (version 1) for possible options.
+timeformat = "iso8601"
+
+# The size of the log buffer that is kept in memory. When the buffer is full, the oldest logs are discarded first.
+buffer_size = 1_000_000
 
 
 # There is no limit to the amount of applications that can be monitored at once.

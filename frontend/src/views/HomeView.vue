@@ -4,21 +4,9 @@
       <SystemInfo></SystemInfo>
     </v-row>
     <v-row>
-      <v-btn-toggle
-        v-model="application"
-        background-color="primary"
-        multiple
-      >
-        <v-btn
-          v-for="app in application_list"
-          :key="app"
-          :value="app"
-        >
-          {{ app }}
-        </v-btn>
-      </v-btn-toggle>
-      <v-btn class="mb-3" :color="colors.primary" @click="refresh">
-        Refresh
+      <ApplicationSelect v-model:application="selected_apps"></ApplicationSelect>
+      <v-btn class="mb-3" :color="colors.primary" @click="apply_app_filter">
+        Apply
       </v-btn>
     </v-row>
     <v-row>
@@ -35,7 +23,7 @@
         <ErrorCountByModule :data="dashboard_info.top_modules_week" card_title="7d errors by module"></ErrorCountByModule>
       </v-col>
       <v-col>
-        <VueUi3dBar :config="config" :dataset="dataset"></VueUi3dBar>
+        <VueUi3dBar :key="barKey" :config="config" :dataset="dataset"></VueUi3dBar>
       </v-col>
     </v-row>
   </v-container>
@@ -57,21 +45,19 @@ import SystemInfo from "@/components/SystemInfo.vue";
 import {fetchWithAuth} from "@/utils";
 import {useAppStore} from "@/store/app";
 import ErrorCountByModule from "@/components/ErrorCountByModule.vue";
+import ApplicationSelect from "@/components/ApplicationSelect.vue";
 
 const store = useAppStore();
-const dashboard_info: DashboardInfo = await fetchWithAuth("/api/dashboard_info").then((res) => res.json())
+const dashboard_info = ref<DashboardInfo>(await fetchWithAuth("/api/dashboard_info").then((res) => res.json())
   .catch(() => {
     store.showSnackbar("Failed to fetch dashboard info", "error");
-  });
+  }));
 
-const application = ref<string[]>();
-const application_list: string[] = await fetchWithAuth("/api/application_list").then((res) => res.json())
-  .catch(() => {
-    store.showSnackbar("Failed to fetch applications", "error");
-  });
+const selected_apps = ref<string[]>([]);
 
+const barKey = ref(0);
 const dataset = ref<VueUi3dBarDataset>({
-  percentage: dashboard_info.log_buffer_usage,
+  percentage: dashboard_info.value.log_buffer_usage,
 });
 
 const config = ref<VueUi3dBarConfig>({
@@ -103,7 +89,7 @@ const config = ref<VueUi3dBarConfig>({
         fontSize: 20,
         bold: true,
         subtitle: {
-          text: dashboard_info.total_log_entries + " in buffer",
+          text: dashboard_info.value.total_log_entries + " in buffer",
         }
       },
       dataLabel: {
@@ -118,8 +104,28 @@ const config = ref<VueUi3dBarConfig>({
   userOptions: { show: false },
 });
 
-const refresh = () => {
-  console.log(application.value);
+const apply_app_filter = async () => {
+  if (selected_apps.value.length > 0) {
+    const search_params = new URLSearchParams();
+    selected_apps.value.forEach((app) => search_params.append("applications", app));
+
+    dashboard_info.value = await fetchWithAuth("/api/dashboard_info?" + search_params).then((res) => res.json())
+      .catch(() => {
+        store.showSnackbar("Failed to fetch dashboard info", "error");
+      });
+  } else {
+    dashboard_info.value = await fetchWithAuth("/api/dashboard_info").then((res) => res.json())
+      .catch(() => {
+        store.showSnackbar("Failed to fetch dashboard info", "error");
+      });
+  }
+
+  dataset.value = {
+    percentage: dashboard_info.value.log_buffer_usage,
+  };
+  
+  config.value.style!.chart!.title!.subtitle!.text = dashboard_info.value.total_log_entries + " in buffer";
+  barKey.value += 1; // Force the component to re-render
 }
 </script>
 

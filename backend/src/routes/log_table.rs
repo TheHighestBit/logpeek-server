@@ -45,11 +45,10 @@ struct LogFilter {
     message: Option<regex::Regex>,
     start_timestamp: Option<OffsetDateTime>,
     end_timestamp: Option<OffsetDateTime>,
-    applications: Vec<usize>,
 }
 
 impl LogFilter {
-    async fn new(params: Params, shared_state: &SharedState) -> Result<Self> {
+    async fn new(params: Params) -> Result<Self> {
         let Params {
             page,
             items_per_page,
@@ -58,7 +57,7 @@ impl LogFilter {
             message,
             start_timestamp,
             end_timestamp,
-            applications,
+            applications: _,
         } = params;
 
         let index = (page - 1) * items_per_page;
@@ -79,12 +78,6 @@ impl LogFilter {
             OffsetDateTime::parse(end_timestamp, &time::format_description::well_known::Iso8601::DEFAULT)
         }).transpose()?;
 
-        let applications = if let Some(param_applications) = applications {
-            convert_app_to_i(&param_applications, &shared_state.i_to_app.lock().await)
-        } else {
-            Vec::new()
-        };
-
         Ok(Self {
             index,
             items_per_page,
@@ -93,7 +86,6 @@ impl LogFilter {
             message,
             start_timestamp,
             end_timestamp,
-            applications
         })
     }
     fn matches(&self, entry: &LogEntry) -> bool {
@@ -127,36 +119,72 @@ impl LogFilter {
             }
         }
 
-        if !self.applications.is_empty() && !self.applications.contains(&entry.application) {
-            return false;
-        }
-
         true
     }
 }
 
 pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state): State<SharedState>) -> (StatusCode, Json<LogTableResponse>) {
     trace!("Request received {:?}", &params);
+    
+    // This logic is also in dashboard_info_handler but refactoring it is not so easy.
+    // I gave up on trying, the ringbuffer has a private iterator type and my Rust skills
+    // are not up to snuff for that case. Maybe somebody smarter than I can do it...
+    let applications = if let Some(param_applications) = &params.applications {
+        convert_app_to_i(param_applications, &shared_state.i_to_app.lock().await)
+    } else {
+        Vec::new()
+    };
 
-    let log_filter_result = LogFilter::new(params, &shared_state).await;
+    let log_filter_result = LogFilter::new(params).await;
 
     match log_filter_result {
         Ok(log_filter) => {
-            let log_array = shared_state.log_buffer.read().await;
-
-            let result = log_array.iter().rev()
-                .skip(log_filter.index)
-                .filter(|entry| log_filter.matches(entry))
-                .take(log_filter.items_per_page)
-                .cloned()
-                .collect::<Vec<LogEntry>>();
+            let log_buffer_map = shared_state.log_buffer.read().await;
+            let mut iterators = log_buffer_map.iter().filter(|entry| applications.is_empty() || applications.contains(&entry.0))
+                .map(|entry| entry.1.iter().rev().peekable())
+                .collect::<Vec<_>>();
             
-            let total_items = match SETTINGS.read().await.get_bool("main.allow_dirty_pagination").unwrap_or(false) {
-                false => log_array.iter()
-                    .filter(|entry| log_filter.matches(entry))
-                    .count(),
-                true => log_array.len(),
-            };
+            let mut result: Vec<LogEntry> = Vec::new();
+            let mut skipped: usize = 0;
+            let mut taken: usize = 0;
+            let mut total_items: usize = 0;
+
+            loop {
+                let entry: &LogEntry;
+                let mut latest_time: Option<&OffsetDateTime> = None;
+                let mut index: usize = 0;
+                
+                for (i, iterator) in iterators.iter_mut().enumerate() {
+                    if let Some(peeked) = iterator.peek() {
+                        if let Some(current_latest) = latest_time {
+                            if peeked.timestamp > *current_latest {
+                                latest_time = Some(&peeked.timestamp);
+                                index = i;
+                            }
+                        } else {
+                            latest_time = Some(&peeked.timestamp);
+                            index = i;
+                        }
+                    }
+                }
+
+                if latest_time.is_some() {
+                    entry = iterators[index].next().unwrap();
+                    
+                    if log_filter.matches(entry) {
+                        total_items += 1;
+                        
+                        if skipped < log_filter.index {
+                            skipped += 1;
+                        } else if taken < log_filter.items_per_page {
+                            result.push(entry.clone());
+                            taken += 1;
+                        }
+                    }
+                } else {
+                    break;
+                }
+            }
 
             (StatusCode::OK, Json({
                 LogTableResponse {

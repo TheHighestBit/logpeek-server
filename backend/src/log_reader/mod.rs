@@ -7,7 +7,7 @@ use std::fs::File;
 use std::collections::HashMap;
 use std::fs::metadata;
 use std::io::{BufRead, BufReader};
-use log::{error, trace, warn};
+use log::{debug, error, trace, warn};
 use std::sync::Arc;
 use config::{Value, ValueKind};
 use glob::glob;
@@ -24,8 +24,8 @@ pub enum TimeFormat<'a> {
     Custom(Vec<FormatItem<'a>>), 
 }
 
-pub async fn load_logs(buffer: Arc<RwLock<AllocRingBuffer<LogEntry>>>, cache: Arc<Mutex<HashMap<String, (std::time::SystemTime, usize)>>>, i_to_app: Arc<Mutex<HashMap<usize, String>>>) {
-    let mut log_buffer = buffer.write().await;
+pub async fn load_logs(buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntry>>>>, cache: Arc<Mutex<HashMap<String, (std::time::SystemTime, usize)>>>, i_to_app: Arc<Mutex<HashMap<usize, String>>>) {
+    let mut log_buffer_map = buffer.write().await;
     let mut log_files = Vec::new();
     let mut cache = cache.lock().await;
     let mut i_to_app = i_to_app.lock().await;
@@ -76,7 +76,8 @@ pub async fn load_logs(buffer: Arc<RwLock<AllocRingBuffer<LogEntry>>>, cache: Ar
             TimeFormat::Custom(format_desc)
         },
         };
-
+        
+        debug!("Loading logs for application: {}", app_path);
 
         for log_file in glob(format!("{}/*.log", app_path).as_str()).expect("Failed to read glob pattern") {
             match log_file {
@@ -96,6 +97,17 @@ pub async fn load_logs(buffer: Arc<RwLock<AllocRingBuffer<LogEntry>>>, cache: Ar
             }
         });
         log_files.sort_by(|a, b| b.1.cmp(&a.1));
+        
+        let log_buffer = log_buffer_map.entry(app_i).or_insert({
+            let app_buffer_size = app_table
+                .get("buffer_size")
+                .expect("An application is missing the buffer_size field in the config!")
+                .clone()
+                .into_uint()
+                .expect("buffer_size is not parsable to an unsigned integer!");
+            
+            AllocRingBuffer::new(app_buffer_size as usize)
+        });
 
         for log_file in log_files.iter().rev() {
             let file = File::open(log_file.0.clone()).expect("Failed to open file");
@@ -155,6 +167,7 @@ fn create_default_map() -> ValueKind {
     map.insert("path".to_string(), Value::new(None, ValueKind::String("logpeek-logs".to_string())));
     map.insert("parser".to_string(), Value::new(None, ValueKind::String(r"^(?P<timestamp>\S+) (?P<level>\S+) (?P<module>\S+) - (?P<message>.+)$".to_string())));
     map.insert("timeformat".to_string(), Value::new(None, ValueKind::String("iso8601".to_string())));
+    map.insert("buffer_size".to_string(), Value::new(None, ValueKind::U64(1_000_000)));
 
     ValueKind::Table(map)
 }

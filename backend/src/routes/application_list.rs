@@ -7,7 +7,8 @@ pub async fn application_list_handler(State(shared_state): State<SharedState>) -
     trace!("Request received");
 
     let i_to_app = shared_state.i_to_app.lock().await;
-    let app_list: Vec<String> = i_to_app.values().cloned().collect();
+    let mut app_list: Vec<String> = i_to_app.values().cloned().collect();
+    app_list.sort();
 
     Json(app_list)
 }

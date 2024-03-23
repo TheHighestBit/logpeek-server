@@ -1,5 +1,8 @@
 <template>
   <v-card height="97vh" border>
+    <v-row>
+      <ApplicationSelect v-model:application="selected_apps"></ApplicationSelect>
+    </v-row>
     <v-row class="flex-wrap pt-2 mb-n5">
       <v-col sm="5" lg="2" class="ml-2">
         <VueDatePicker v-model="date_range_filter" range utc time-picker-inline dark :preset-dates="presetDates"
@@ -42,7 +45,7 @@
     </v-row>
     <v-divider class="border-opacity-50"></v-divider>
     <v-data-table-server
-      height="calc(97vh - 130px)"
+      height="calc(97vh - 170px)"
       v-model:items-per-page="itemsPerPage"
       :headers="headers"
       :items-length="totalItems"
@@ -79,6 +82,7 @@ import {fetchWithAuth} from "@/utils";
 import {useAppStore} from "@/store/app";
 import router from "@/router";
 import {useRoute} from "vue-router";
+import ApplicationSelect from "@/components/ApplicationSelect.vue";
 
 const items = ref<LogEntry[]>([]);
 const store = useAppStore();
@@ -89,13 +93,14 @@ const message_filter = ref<string>();
 const message_history = ref<string[]>([]);
 const module_filter = ref<string>();
 const module_history = ref<string[]>([]);
+const selected_apps = ref<string[]>([]);
 
 const loading = ref(true);
 const itemsPerPage = ref(10);
 const totalItems = ref(0);
 const headers = ref([
   {title: "Index", align: "start", key: "index", sortable: false},
-  {title: "Timestamp", align: "start", key: "timestamp_formatted", sortable: false},
+  {title: "Timestamp (LOCAL)", align: "start", key: "timestamp_formatted", sortable: false},
   {title: "Level", align: "start", key: "level", sortable: false},
   {title: "Module", align: "start", key: "module", sortable: false},
   {title: "Message", align: "start", key: "message", sortable: false}
@@ -163,7 +168,6 @@ const load = async ({page, itemsPerPage}: { page: number, itemsPerPage: number }
     let start_date = date_range_filter.value[0];
     let end_date = date_range_filter.value[1] !== null ? date_range_filter.value[1] : new Date();
 
-    console.log(typeof start_date);
     if (typeof start_date === "string") {
       start_date = new Date(start_date);
     }
@@ -188,6 +192,10 @@ const load = async ({page, itemsPerPage}: { page: number, itemsPerPage: number }
     search_params.append("module_name", module_filter.value);
   }
 
+  if (selected_apps.value.length > 0) {
+    selected_apps.value.forEach((app) => search_params.append("applications", app));
+  }
+
   const response: LogTableResponse = await fetchWithAuth("/api/log_table?" + search_params)
     .then((res) => res.json())
     .catch(() => {
@@ -196,6 +204,7 @@ const load = async ({page, itemsPerPage}: { page: number, itemsPerPage: number }
 
   response.logs.map((item: LogEntry) => {
     item.index = (page - 1) * itemsPerPage + response.logs.indexOf(item) + 1;
+    item.timestamp = new Date(item.timestamp).toLocaleString('en-GB');
   });
 
   items.value = response.logs

@@ -2,7 +2,10 @@ mod routes;
 mod log_reader;
 mod middleware;
 
+use std::cmp::Reverse;
 use std::collections::HashMap;
+use std::iter::Peekable;
+use std::path::PathBuf;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
 use serde::Serialize;
 use std::sync::Arc;
@@ -29,7 +32,7 @@ struct LogEntry {
 
 #[derive(Clone)]
 struct SharedState {
-    log_buffer: Arc<RwLock<AllocRingBuffer<LogEntry>>>,
+    log_buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntry>>>>,
     cache: Arc<Mutex<HashMap<String, (std::time::SystemTime, usize)>>>,
     i_to_app: Arc<Mutex<HashMap<usize, String>>>,
     last_buffer_update: Arc<Mutex<std::time::SystemTime>>,
@@ -67,12 +70,14 @@ pub async fn run() {
     info!("Starting...");
 
     //Read in and process the log entries
-    let log_buffer = Arc::new(RwLock::new(AllocRingBuffer::new(SETTINGS.read().await.get_int("main.buffer_size").unwrap_or(1_000_000) as usize)));
+    //let log_buffer = Arc::new(RwLock::new(AllocRingBuffer::new(SETTINGS.read().await.get_int("main.buffer_size").unwrap_or(1_000_000) as usize)));
+    let log_buffer = Arc::new(RwLock::new(HashMap::new()));
     let cache = Arc::new(Mutex::new(HashMap::new()));
     let i_to_app = Arc::new(Mutex::new(HashMap::new()));
 
     log_reader::load_logs(log_buffer.clone(), cache.clone(), i_to_app.clone()).await;
-    info!("Loaded {} log entries", log_buffer.read().await.len());
+    let loaded_count = log_buffer.read().await.iter().map(|(_, buffer)| buffer.len()).sum::<usize>();
+    info!("Loaded {} log entries for {} applications", loaded_count, log_buffer.read().await.len());
 
     // Initialize the system info
     let sys = Arc::new(Mutex::new(System::new_with_specifics(
