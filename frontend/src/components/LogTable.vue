@@ -1,8 +1,6 @@
 <template>
-  <v-card height="97vh" border>
-    <v-row>
-      <ApplicationSelect v-model:application="selected_apps"></ApplicationSelect>
-    </v-row>
+  <ApplicationSelect class="mb-2" v-model:application="selected_apps" @update:application="refresh_table"></ApplicationSelect>
+  <v-card height="94vh" border>
     <v-row class="flex-wrap pt-2 mb-n5">
       <v-col sm="5" lg="2" class="ml-2">
         <VueDatePicker v-model="date_range_filter" range utc time-picker-inline dark :preset-dates="presetDates"
@@ -45,7 +43,7 @@
     </v-row>
     <v-divider class="border-opacity-50"></v-divider>
     <v-data-table-server
-      height="calc(97vh - 170px)"
+      height="calc(97vh - 175px)"
       v-model:items-per-page="itemsPerPage"
       :headers="headers"
       :items-length="totalItems"
@@ -56,15 +54,15 @@
     >
       <template v-slot:item="i">
         <tr>
-          <td>{{ i.item.index }}</td>
-          <td>{{ i.item.timestamp }}</td>
-          <td v-if="i.item.level === 'ERROR'" style="color: #ff0335">{{ i.item.level }}</td>
-          <td v-else-if="i.item.level === 'WARN'" style="color: #FFC107">{{ i.item.level }}</td>
-          <td v-else-if="i.item.level === 'INFO'" style="color: #2ebb36">{{ i.item.level }}</td>
-          <td v-else-if="i.item.level === 'DEBUG'" style="color: #2196f3">{{ i.item.level }}</td>
-          <td v-else style="color: #8764a2">{{ i.item.level }}</td>
-          <td>{{ i.item.module }}</td>
-          <td>{{ i.item.message }}</td>
+          <td>{{ i.item.entry.index }}</td>
+          <td>{{ i.item.entry.timestamp }}</td>
+          <td v-if="i.item.entry.level === 'ERROR'" style="color: #ff0335">{{ i.item.entry.level }}</td>
+          <td v-else-if="i.item.entry.level === 'WARN'" style="color: #FFC107">{{ i.item.entry.level }}</td>
+          <td v-else-if="i.item.entry.level === 'INFO'" style="color: #2ebb36">{{ i.item.entry.level }}</td>
+          <td v-else-if="i.item.entry.level === 'DEBUG'" style="color: #2196f3">{{ i.item.entry.level }}</td>
+          <td v-else style="color: #8764a2">{{ i.item.entry.level }}</td>
+          <td>{{ `${i.item.application} -> ${i.item.entry.module}` }}</td>
+          <td>{{ i.item.entry.message }}</td>
         </tr>
       </template>
     </v-data-table-server>
@@ -75,16 +73,16 @@
 import {onBeforeUnmount, onMounted, ref} from 'vue'
 import VueDatePicker from "@vuepic/vue-datepicker";
 import '@vuepic/vue-datepicker/dist/main.css';
-import {LogEntry} from "@/interfaces/LogEntry";
+import {LogEntryWithApplication} from "@/interfaces/LogEntry";
 import {LogTableResponse} from "@/interfaces/LogTableResponse";
-import {endOfMonth, endOfYear, startOfMonth, startOfYear, subMonths, subDays} from 'date-fns';
+import {endOfMonth, startOfMonth, startOfYear, subMonths, subDays} from 'date-fns';
 import {fetchWithAuth} from "@/utils";
 import {useAppStore} from "@/store/app";
 import router from "@/router";
 import {useRoute} from "vue-router";
 import ApplicationSelect from "@/components/ApplicationSelect.vue";
 
-const items = ref<LogEntry[]>([]);
+const items = ref<LogEntryWithApplication[]>([]);
 const store = useAppStore();
 
 const date_range_filter = ref<Date[]>([]);
@@ -93,7 +91,9 @@ const message_filter = ref<string>();
 const message_history = ref<string[]>([]);
 const module_filter = ref<string>();
 const module_history = ref<string[]>([]);
-const selected_apps = ref<string[]>([]);
+const selected_apps = ref<string[]>(
+  JSON.parse(sessionStorage.getItem("selected_apps") || "[]")
+);
 
 const loading = ref(true);
 const itemsPerPage = ref(10);
@@ -141,6 +141,7 @@ onMounted(() => {
     }
 
     router.replace({query: {}});
+    console.log(selected_apps.value)
     refresh_table();
   }
 });
@@ -193,6 +194,7 @@ const load = async ({page, itemsPerPage}: { page: number, itemsPerPage: number }
   }
 
   if (selected_apps.value.length > 0) {
+    sessionStorage.setItem("selected_apps", JSON.stringify(selected_apps.value));
     selected_apps.value.forEach((app) => search_params.append("applications", app));
   }
 
@@ -202,9 +204,9 @@ const load = async ({page, itemsPerPage}: { page: number, itemsPerPage: number }
     store.showSnackbar("Error fetching logs", "error");
   });
 
-  response.logs.map((item: LogEntry) => {
-    item.index = (page - 1) * itemsPerPage + response.logs.indexOf(item) + 1;
-    item.timestamp = new Date(item.timestamp).toLocaleString('en-GB');
+  response.logs.map((item: LogEntryWithApplication) => {
+    item.entry.index = (page - 1) * itemsPerPage + response.logs.indexOf(item) + 1;
+    item.entry.timestamp = new Date(item.entry.timestamp).toLocaleString('en-GB');
   });
 
   items.value = response.logs

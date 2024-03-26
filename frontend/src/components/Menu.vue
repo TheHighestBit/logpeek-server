@@ -4,7 +4,7 @@
       <v-list-item :to="{ name: 'Home' }" :exact="true" prepend-icon="mdi-folder" title="Home"></v-list-item>
       <v-list-item :to="{ name: 'LogTable' }" :exact="true" prepend-icon="mdi-table" title="Log Table"></v-list-item>
       <v-list-item @click="force_refresh" prepend-icon="mdi-refresh" title="Force Refresh"></v-list-item>
-      <v-list-item @click="logout" prepend-icon="mdi-logout" title="Log out"></v-list-item>
+      <v-list-item v-if="is_logged_in()" @click="logout" prepend-icon="mdi-logout" title="Log out"></v-list-item>
     </v-list>
   </v-navigation-drawer>
 </template>
@@ -21,7 +21,10 @@ const logout = () => {
   } else {
     store.showSnackbar("Failed to log out! Make sure authentication is enabled on the server side.", "error");
   }
+}
 
+const is_logged_in = () => {
+  return localStorage.getItem('secret') !== null;
 }
 
 const force_refresh = () => {

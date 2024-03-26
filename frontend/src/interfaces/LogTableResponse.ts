@@ -1,6 +1,6 @@
-import {LogEntry} from "@/interfaces/LogEntry";
+import {LogEntryWithApplication} from "@/interfaces/LogEntry";
 
 export interface LogTableResponse {
-  logs: LogEntry[];
+  logs: LogEntryWithApplication[];
   total_items: number;
 }

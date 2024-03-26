@@ -1,8 +1,11 @@
 <template>
   <v-btn-toggle
     :model-value="props.application"
+    divided
+    density="compact"
     @update:model-value="emit('update:application', $event)"
     background-color="primary"
+    variant="outlined"
     multiple
   >
     <v-btn

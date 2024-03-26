@@ -79,7 +79,8 @@ pub async fn load_logs(buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntr
         
         debug!("Loading logs for application: {}", app_path);
 
-        for log_file in glob(format!("{}/*.log", app_path).as_str()).expect("Failed to read glob pattern") {
+        for log_file in glob(format!("{}/*.log", app_path).as_str()).expect("Failed to read glob pattern")
+            .chain(glob(format!("{}/*.txt", app_path).as_str()).expect("Failed to read glob pattern")) {
             match log_file {
                 Ok(log_file) => {
                     log_files.push((log_file.clone(), get_modified_time(log_file.to_str().unwrap())));
@@ -101,7 +102,7 @@ pub async fn load_logs(buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntr
         let log_buffer = log_buffer_map.entry(app_i).or_insert({
             let app_buffer_size = app_table
                 .get("buffer_size")
-                .expect("An application is missing the buffer_size field in the config!")
+                .unwrap_or(&Value::new(None, ValueKind::U64(1_000_000)))
                 .clone()
                 .into_uint()
                 .expect("buffer_size is not parsable to an unsigned integer!");

@@ -21,7 +21,7 @@ buffer_update_cooldown = 10
 # When true, sets the minimum log level to debug
 debug = false
 
-# Wheter to write log files
+# Whether to write log files
 log_to_file = true
 
 # When log_to_file is true, logs will be written to this directory
@@ -40,7 +40,7 @@ cert = "path/to/cert.pem"
 key = "path/to/key.pem"
 
 
-# List of applications whose log files will be monitored. Each application must have a path, a respective parser and the timeformat.
+# List of applications whose log files will be monitored. Each application must have a path, a respective parser, the timeformat and optional buffer_size.
 [[application]]
 # Path to the application's log folder.
 path = "logpeek-logs"
@@ -57,42 +57,6 @@ timeformat = "iso8601"
 
 # The size of the log buffer that is kept in memory. When the buffer is full, the oldest logs are discarded first.
 buffer_size = 1_000_000
-
-
-[[application]]
-# Path to the application's log folder.
-path = "test1"
-
-# The regular expression used to parse the logs files of this application.
-# At the moment, all capture groups present in the example below must be included.
-parser = '''^(?P<timestamp>\S+) (?P<level>\S+) (?P<module>\S+) - (?P<message>.+)$'''
-
-# The format of the timestamp in the logs. Supported formats are "iso8601", "rfc3339", "rfc2822" and custom.
-# Altough custom timeformats are supported, built-in formats should be preferred.
-# Since UTC is used internally, the timeformat must include an offset. Minimum example for a custom timeformat: "[year]-[month]-[day]|[hour]|[offset_hour]"
-# Refer to https://time-rs.github.io/book/api/format-description.html (version 1) for possible options.
-timeformat = "iso8601"
-
-# The size of the log buffer that is kept in memory. When the buffer is full, the oldest logs are discarded first.
-buffer_size = 1_000_000
-
-[[application]]
-# Path to the application's log folder.
-path = "test2"
-
-# The regular expression used to parse the logs files of this application.
-# At the moment, all capture groups present in the example below must be included.
-parser = '''^(?P<timestamp>\S+) (?P<level>\S+) (?P<module>\S+) - (?P<message>.+)$'''
-
-# The format of the timestamp in the logs. Supported formats are "iso8601", "rfc3339", "rfc2822" and custom.
-# Altough custom timeformats are supported, built-in formats should be preferred.
-# Since UTC is used internally, the timeformat must include an offset. Minimum example for a custom timeformat: "[year]-[month]-[day]|[hour]|[offset_hour]"
-# Refer to https://time-rs.github.io/book/api/format-description.html (version 1) for possible options.
-timeformat = "iso8601"
-
-# The size of the log buffer that is kept in memory. When the buffer is full, the oldest logs are discarded first.
-buffer_size = 1_000_000
-
 
 # There is no limit to the amount of applications that can be monitored at once.
 # Simply add another [[application]] section with the same fields as above.

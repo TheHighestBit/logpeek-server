@@ -11,7 +11,7 @@ use ringbuffer::{RingBuffer};
 use time::OffsetDateTime;
 
 
-use crate::{convert_app_to_i, LogEntry, SETTINGS, SharedState};
+use crate::{convert_app_to_i, LogEntry, SharedState};
 
 #[derive(Debug, Deserialize)]
 pub struct Params {
@@ -31,9 +31,15 @@ pub struct Params {
 }
 
 #[derive(Debug, Serialize)]
+pub struct LogEntryWithApplication {
+    pub entry: LogEntry,
+    pub application: String,
+}
+
+#[derive(Debug, Serialize)]
 pub struct LogTableResponse {
     pub total_items: usize,
-    pub logs: Vec<LogEntry>,
+    pub logs: Vec<LogEntryWithApplication>,
 }
 
 #[derive(Debug)]
@@ -129,8 +135,9 @@ pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state)
     // This logic is also in dashboard_info_handler but refactoring it is not so easy.
     // I gave up on trying, the ringbuffer has a private iterator type and my Rust skills
     // are not up to snuff for that case. Maybe somebody smarter than I can do it...
+    let i_to_app = shared_state.i_to_app.lock().await;
     let applications = if let Some(param_applications) = &params.applications {
-        convert_app_to_i(param_applications, &shared_state.i_to_app.lock().await)
+        convert_app_to_i(param_applications, &i_to_app)
     } else {
         Vec::new()
     };
@@ -144,7 +151,7 @@ pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state)
                 .map(|entry| entry.1.iter().rev().peekable())
                 .collect::<Vec<_>>();
             
-            let mut result: Vec<LogEntry> = Vec::new();
+            let mut result: Vec<LogEntryWithApplication> = Vec::new();
             let mut skipped: usize = 0;
             let mut taken: usize = 0;
             let mut total_items: usize = 0;
@@ -177,7 +184,10 @@ pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state)
                         if skipped < log_filter.index {
                             skipped += 1;
                         } else if taken < log_filter.items_per_page {
-                            result.push(entry.clone());
+                            result.push(LogEntryWithApplication {
+                                entry: entry.clone(),
+                                application: i_to_app.get(&entry.application).unwrap().clone(),
+                            });
                             taken += 1;
                         }
                     }

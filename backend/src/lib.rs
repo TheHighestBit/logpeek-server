@@ -2,10 +2,7 @@ mod routes;
 mod log_reader;
 mod middleware;
 
-use std::cmp::Reverse;
 use std::collections::HashMap;
-use std::iter::Peekable;
-use std::path::PathBuf;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
 use serde::Serialize;
 use std::sync::Arc;
@@ -70,7 +67,6 @@ pub async fn run() {
     info!("Starting...");
 
     //Read in and process the log entries
-    //let log_buffer = Arc::new(RwLock::new(AllocRingBuffer::new(SETTINGS.read().await.get_int("main.buffer_size").unwrap_or(1_000_000) as usize)));
     let log_buffer = Arc::new(RwLock::new(HashMap::new()));
     let cache = Arc::new(Mutex::new(HashMap::new()));
     let i_to_app = Arc::new(Mutex::new(HashMap::new()));
