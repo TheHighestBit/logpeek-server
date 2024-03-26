@@ -141,7 +141,6 @@ onMounted(() => {
     }
 
     router.replace({query: {}});
-    console.log(selected_apps.value)
     refresh_table();
   }
 });
