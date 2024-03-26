@@ -3,8 +3,6 @@
 
 # General configuration options.
 [main]
-# The size of the log buffer that is kept in memory. When the buffer is full, the oldest logs are discarded first.
-buffer_size = 1_000_000
 
 # Host address of the server
 address = "127.0.0.1:3001"
@@ -18,16 +16,12 @@ max_login_attempts = 3
 # The amount of seconds to not read in new log entires into the buffer for incoming requests.
 buffer_update_cooldown = 10
 
-# When true, paginating filtered logs will use the total, unfiltered log count.
-# To get the total filtered log count, the entire buffer needs to be processed, which might be wasteful in performance critical circumstances.
-allow_dirty_pagination = false
-
 
 [main.logger]
 # When true, sets the minimum log level to debug
 debug = false
 
-# Wheter to write log files
+# Whether to write log files
 log_to_file = true
 
 # When log_to_file is true, logs will be written to this directory
@@ -46,7 +40,7 @@ cert = "path/to/cert.pem"
 key = "path/to/key.pem"
 
 
-# List of applications whose log files will be monitored. Each application must have a path, a respective parser and the timeformat.
+# List of applications whose log files will be monitored. Each application must have a path, a respective parser, the timeformat and optional buffer_size.
 [[application]]
 # Path to the application's log folder.
 path = "logpeek-logs"
@@ -61,6 +55,8 @@ parser = '''^(?P<timestamp>\S+) (?P<level>\S+) (?P<module>\S+) - (?P<message>.+)
 # Refer to https://time-rs.github.io/book/api/format-description.html (version 1) for possible options.
 timeformat = "iso8601"
 
+# The size of the log buffer that is kept in memory. When the buffer is full, the oldest logs are discarded first.
+buffer_size = 1_000_000
 
 # There is no limit to the amount of applications that can be monitored at once.
 # Simply add another [[application]] section with the same fields as above.

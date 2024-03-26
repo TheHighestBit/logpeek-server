@@ -14,7 +14,7 @@ use lazy_static::lazy_static;
 use log::{info, LevelFilter};
 use logpeek::config::LoggingMode;
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, System};
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::{Mutex, MutexGuard, RwLock};
 use routes::router_setup;
 
 #[derive(Debug, Serialize, Clone)]
@@ -24,12 +24,14 @@ struct LogEntry {
     level: log::Level,
     module: String,
     message: String,
+    application: usize,
 }
 
 #[derive(Clone)]
 struct SharedState {
-    log_buffer: Arc<RwLock<AllocRingBuffer<LogEntry>>>,
+    log_buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntry>>>>,
     cache: Arc<Mutex<HashMap<String, (std::time::SystemTime, usize)>>>,
+    i_to_app: Arc<Mutex<HashMap<usize, String>>>,
     last_buffer_update: Arc<Mutex<std::time::SystemTime>>,
     sys: Arc<Mutex<System>>,
     server_start_time: Arc<std::time::SystemTime>,
@@ -65,11 +67,13 @@ pub async fn run() {
     info!("Starting...");
 
     //Read in and process the log entries
-    let log_buffer = Arc::new(RwLock::new(AllocRingBuffer::new(SETTINGS.read().await.get_int("main.buffer_size").unwrap_or(1_000_000) as usize)));
+    let log_buffer = Arc::new(RwLock::new(HashMap::new()));
     let cache = Arc::new(Mutex::new(HashMap::new()));
+    let i_to_app = Arc::new(Mutex::new(HashMap::new()));
 
-    log_reader::load_logs(log_buffer.clone(), cache.clone()).await;
-    info!("Loaded {} log entries", log_buffer.read().await.len());
+    log_reader::load_logs(log_buffer.clone(), cache.clone(), i_to_app.clone()).await;
+    let loaded_count = log_buffer.read().await.iter().map(|(_, buffer)| buffer.len()).sum::<usize>();
+    info!("Loaded {} log entries for {} applications", loaded_count, log_buffer.read().await.len());
 
     // Initialize the system info
     let sys = Arc::new(Mutex::new(System::new_with_specifics(
@@ -83,6 +87,7 @@ pub async fn run() {
     let shared_state = SharedState {
         log_buffer,
         cache,
+        i_to_app,
         last_buffer_update: Arc::new(Mutex::new(std::time::SystemTime::now())),
         sys,
         server_start_time: Arc::new(std::time::SystemTime::now()),
@@ -114,4 +119,19 @@ pub async fn run() {
             .await
             .unwrap();
     }
+}
+
+pub fn convert_app_to_i(apps: &[String], i_to_app: &MutexGuard<HashMap<usize, String>>) -> Vec<usize> {
+    let mut applications = Vec::new();
+
+    // Application paths are stored in a hashmap that maps an index to the path. Before filtering, we need to convert back to index representation.
+    if !apps.is_empty() {
+        for app in apps.iter() {
+            if let Some(i) = i_to_app.iter().find(|(_, app_path)| **app_path == *app).map(|(i, _)| i) {
+                applications.push(*i);
+            }
+        }
+    }
+    
+    applications
 }

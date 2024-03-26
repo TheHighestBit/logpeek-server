@@ -1,13 +1,19 @@
 use std::collections::BTreeMap;
-use axum::Json;
+
 use axum::extract::State;
-use log::trace;
-
+use axum::Json;
+use axum_extra::extract::Query;
+use log::{debug, trace};
 use ringbuffer::RingBuffer;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 
+use crate::{convert_app_to_i, LogEntry, SharedState};
 
-use crate::SharedState;
+#[derive(Debug, Deserialize)]
+pub struct Params {
+    applications: Option<Vec<String>>,
+}
 
 #[derive(Serialize)]
 pub struct DashboardResponse {
@@ -23,10 +29,17 @@ pub struct DashboardResponse {
     total_log_entries: u32,
 }
 
-pub async fn dashboard_info_handler(State(shared_state): State<SharedState>) -> Json<DashboardResponse> {
-    trace!("Request received");
-    
-    let log_array = shared_state.log_buffer.read().await;
+pub async fn dashboard_info_handler(Query(params): Query<Params>, State(shared_state): State<SharedState>) -> Json<DashboardResponse> {
+    trace!("Request received {:?}", params);
+
+    let applications = if let Some(param_applications) = &params.applications {
+        convert_app_to_i(param_applications, &shared_state.i_to_app.lock().await)
+    } else {
+        Vec::new()
+    };
+
+    debug!("Applications filter after conversion: {:?}", applications);
+
     let current_time = time::OffsetDateTime::now_utc();
     let mut total_logs_24: [u32; 24] = [0; 24];
     let mut error_logs_24: [u32; 24] = [0; 24];
@@ -38,7 +51,42 @@ pub async fn dashboard_info_handler(State(shared_state): State<SharedState>) -> 
     let mut top_modules_24: Vec<(String, u32)> = Vec::new();
     let mut flag_24 = false;
 
-    for entry in log_array.iter().rev().take_while(|entry| entry.timestamp > current_time - time::Duration::days(7)) {
+    let log_buffer_map = shared_state.log_buffer.read().await;
+    let mut iterators = log_buffer_map.iter().filter(|entry| applications.is_empty() || applications.contains(&entry.0))
+        .map(|entry| entry.1.iter().rev().peekable())
+        .collect::<Vec<_>>();
+    
+    loop {
+        // First we need to find which buffer has the latest log entry
+        let entry: &LogEntry;
+        let mut latest_time: Option<&OffsetDateTime> = None;
+        let mut index: usize = 0;
+        
+        for (i, iterator) in iterators.iter_mut().enumerate() {
+            if let Some(peeked) = iterator.peek() {
+                if let Some(current_latest) = latest_time {
+                    if peeked.timestamp > *current_latest {
+                        latest_time = Some(&peeked.timestamp);
+                        index = i;
+                    }
+                } else {
+                    latest_time = Some(&peeked.timestamp);
+                    index = i;
+                }
+            }
+        }
+        
+        if latest_time.is_some() {
+            entry = iterators[index].next().unwrap(); // This unwrap is safe
+        } else {
+            break;
+        }
+        
+        // No need to process logs older than 7 days
+        if entry.timestamp < current_time - time::Duration::days(7) {
+            break;
+        }
+
         if entry.timestamp > current_time - time::Duration::hours(24) {
             let hour: usize = (current_time - entry.timestamp).whole_hours() as usize;
             match entry.level {
@@ -61,7 +109,7 @@ pub async fn dashboard_info_handler(State(shared_state): State<SharedState>) -> 
             top_modules_24 = module_count.into_iter().take(5)
                 .map(|(module, count)| (module, count * 100 / total_24_errors))
                 .collect();
-            
+
             flag_24 = true;
         }
 
@@ -74,7 +122,7 @@ pub async fn dashboard_info_handler(State(shared_state): State<SharedState>) -> 
             log::Level::Warn => warning_logs_week[day] += 1,
             _ => {}
         }
-        
+
         total_logs_week[day] += 1;
     }
 
@@ -94,6 +142,16 @@ pub async fn dashboard_info_handler(State(shared_state): State<SharedState>) -> 
     if !flag_24 {
         top_modules_24 = top_modules_week.clone();
     }
+    
+    let mut total_length = 0;
+    let mut total_capacity = 0;
+
+    log_buffer_map.iter()
+        .filter(|entry| applications.is_empty() || applications.contains(entry.0))
+        .for_each(|entry| {
+            total_length += entry.1.len();
+            total_capacity += entry.1.capacity();
+        });
 
     Json(DashboardResponse {
         total_logs_24,
@@ -104,7 +162,7 @@ pub async fn dashboard_info_handler(State(shared_state): State<SharedState>) -> 
         warning_logs_week,
         top_modules_24,
         top_modules_week,
-        log_buffer_usage: log_array.len() as f32 / log_array.capacity() as f32 * 100.0,
-        total_log_entries: log_array.len() as u32,
+        log_buffer_usage: total_length as f32 / total_capacity as f32 * 100.0,
+        total_log_entries: total_length as u32,
     })
 }

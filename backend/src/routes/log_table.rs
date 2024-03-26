@@ -3,14 +3,15 @@ use std::{str::FromStr, fmt};
 use anyhow::Result;
 use log::{error, trace};
 use serde::{Deserialize, Deserializer, de, Serialize};
-use axum::{extract::Query, Json};
+use axum::Json;
 use axum::extract::State;
+use axum_extra::extract::Query;
 use axum::http::StatusCode;
 use ringbuffer::{RingBuffer};
 use time::OffsetDateTime;
 
 
-use crate::{LogEntry, SETTINGS, SharedState};
+use crate::{convert_app_to_i, LogEntry, SharedState};
 
 #[derive(Debug, Deserialize)]
 pub struct Params {
@@ -26,12 +27,19 @@ pub struct Params {
     start_timestamp: Option<String>,
     #[serde(default, deserialize_with = "empty_string_as_none")]
     end_timestamp: Option<String>,
+    applications: Option<Vec<String>>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct LogEntryWithApplication {
+    pub entry: LogEntry,
+    pub application: String,
 }
 
 #[derive(Debug, Serialize)]
 pub struct LogTableResponse {
     pub total_items: usize,
-    pub logs: Vec<LogEntry>,
+    pub logs: Vec<LogEntryWithApplication>,
 }
 
 #[derive(Debug)]
@@ -46,7 +54,7 @@ struct LogFilter {
 }
 
 impl LogFilter {
-    fn new(params: &Params) -> Result<Self> {
+    async fn new(params: Params) -> Result<Self> {
         let Params {
             page,
             items_per_page,
@@ -55,11 +63,10 @@ impl LogFilter {
             message,
             start_timestamp,
             end_timestamp,
+            applications: _,
         } = params;
 
-        let index = (*page - 1) * *items_per_page;
-
-        let min_log_level = *min_log_level;
+        let index = (page - 1) * items_per_page;
 
         let module_name = module_name.as_ref().map(|module_name| {
             regex::Regex::new(module_name)
@@ -79,7 +86,7 @@ impl LogFilter {
 
         Ok(Self {
             index,
-            items_per_page: *items_per_page,
+            items_per_page,
             min_log_level,
             module_name,
             message,
@@ -123,27 +130,71 @@ impl LogFilter {
 }
 
 pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state): State<SharedState>) -> (StatusCode, Json<LogTableResponse>) {
-    trace!("Request received {:?}", params);
+    trace!("Request received {:?}", &params);
+    
+    // This logic is also in dashboard_info_handler but refactoring it is not so easy.
+    // I gave up on trying, the ringbuffer has a private iterator type and my Rust skills
+    // are not up to snuff for that case. Maybe somebody smarter than I can do it...
+    let i_to_app = shared_state.i_to_app.lock().await;
+    let applications = if let Some(param_applications) = &params.applications {
+        convert_app_to_i(param_applications, &i_to_app)
+    } else {
+        Vec::new()
+    };
 
-    let log_filter_result = LogFilter::new(&params);
+    let log_filter_result = LogFilter::new(params).await;
 
     match log_filter_result {
         Ok(log_filter) => {
-            let log_array = shared_state.log_buffer.read().await;
-
-            let result = log_array.iter().rev()
-                .skip(log_filter.index)
-                .filter(|entry| log_filter.matches(entry))
-                .take(log_filter.items_per_page)
-                .cloned()
-                .collect::<Vec<LogEntry>>();
+            let log_buffer_map = shared_state.log_buffer.read().await;
+            let mut iterators = log_buffer_map.iter().filter(|entry| applications.is_empty() || applications.contains(&entry.0))
+                .map(|entry| entry.1.iter().rev().peekable())
+                .collect::<Vec<_>>();
             
-            let total_items = match SETTINGS.read().await.get_bool("main.allow_dirty_pagination").unwrap_or(false) {
-                false => log_array.iter()
-                    .filter(|entry| log_filter.matches(entry))
-                    .count(),
-                true => log_array.len(),
-            };
+            let mut result: Vec<LogEntryWithApplication> = Vec::new();
+            let mut skipped: usize = 0;
+            let mut taken: usize = 0;
+            let mut total_items: usize = 0;
+
+            loop {
+                let entry: &LogEntry;
+                let mut latest_time: Option<&OffsetDateTime> = None;
+                let mut index: usize = 0;
+                
+                for (i, iterator) in iterators.iter_mut().enumerate() {
+                    if let Some(peeked) = iterator.peek() {
+                        if let Some(current_latest) = latest_time {
+                            if peeked.timestamp > *current_latest {
+                                latest_time = Some(&peeked.timestamp);
+                                index = i;
+                            }
+                        } else {
+                            latest_time = Some(&peeked.timestamp);
+                            index = i;
+                        }
+                    }
+                }
+
+                if latest_time.is_some() {
+                    entry = iterators[index].next().unwrap();
+                    
+                    if log_filter.matches(entry) {
+                        total_items += 1;
+                        
+                        if skipped < log_filter.index {
+                            skipped += 1;
+                        } else if taken < log_filter.items_per_page {
+                            result.push(LogEntryWithApplication {
+                                entry: entry.clone(),
+                                application: i_to_app.get(&entry.application).unwrap().clone(),
+                            });
+                            taken += 1;
+                        }
+                    }
+                } else {
+                    break;
+                }
+            }
 
             (StatusCode::OK, Json({
                 LogTableResponse {
@@ -153,7 +204,7 @@ pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state)
             }))
         },
         Err(err) => {
-            error!("Error parsing log filter: {} with params: {:?}", err, params);
+            error!("Error parsing log filter: {}", err);
             (StatusCode::BAD_REQUEST, Json({
                 LogTableResponse {
                     total_items: 0,
@@ -165,7 +216,7 @@ pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state)
 }
 
 // Serde deserialization decorator to map empty Strings to None,
-fn empty_string_as_none<'de, D, T>(de: D) -> Result<Option<T>, D::Error>
+pub fn empty_string_as_none<'de, D, T>(de: D) -> Result<Option<T>, D::Error>
 where
     D: Deserializer<'de>,
     T: FromStr,

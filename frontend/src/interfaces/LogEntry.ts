@@ -5,3 +5,8 @@ export interface LogEntry {
   module: string;
   message: string;
 }
+
+export interface LogEntryWithApplication {
+  entry: LogEntry;
+  application: string;
+}

@@ -1,5 +1,6 @@
 <template>
-  <v-card height="97vh" border>
+  <ApplicationSelect class="mb-2" v-model:application="selected_apps" @update:application="refresh_table"></ApplicationSelect>
+  <v-card height="94vh" border>
     <v-row class="flex-wrap pt-2 mb-n5">
       <v-col sm="5" lg="2" class="ml-2">
         <VueDatePicker v-model="date_range_filter" range utc time-picker-inline dark :preset-dates="presetDates"
@@ -42,7 +43,7 @@
     </v-row>
     <v-divider class="border-opacity-50"></v-divider>
     <v-data-table-server
-      height="calc(97vh - 130px)"
+      height="calc(97vh - 175px)"
       v-model:items-per-page="itemsPerPage"
       :headers="headers"
       :items-length="totalItems"
@@ -53,15 +54,15 @@
     >
       <template v-slot:item="i">
         <tr>
-          <td>{{ i.item.index }}</td>
-          <td>{{ i.item.timestamp }}</td>
-          <td v-if="i.item.level === 'ERROR'" style="color: #ff0335">{{ i.item.level }}</td>
-          <td v-else-if="i.item.level === 'WARN'" style="color: #FFC107">{{ i.item.level }}</td>
-          <td v-else-if="i.item.level === 'INFO'" style="color: #2ebb36">{{ i.item.level }}</td>
-          <td v-else-if="i.item.level === 'DEBUG'" style="color: #2196f3">{{ i.item.level }}</td>
-          <td v-else style="color: #8764a2">{{ i.item.level }}</td>
-          <td>{{ i.item.module }}</td>
-          <td>{{ i.item.message }}</td>
+          <td>{{ i.item.entry.index }}</td>
+          <td>{{ i.item.entry.timestamp }}</td>
+          <td v-if="i.item.entry.level === 'ERROR'" style="color: #ff0335">{{ i.item.entry.level }}</td>
+          <td v-else-if="i.item.entry.level === 'WARN'" style="color: #FFC107">{{ i.item.entry.level }}</td>
+          <td v-else-if="i.item.entry.level === 'INFO'" style="color: #2ebb36">{{ i.item.entry.level }}</td>
+          <td v-else-if="i.item.entry.level === 'DEBUG'" style="color: #2196f3">{{ i.item.entry.level }}</td>
+          <td v-else style="color: #8764a2">{{ i.item.entry.level }}</td>
+          <td>{{ `${i.item.application} -> ${i.item.entry.module}` }}</td>
+          <td>{{ i.item.entry.message }}</td>
         </tr>
       </template>
     </v-data-table-server>
@@ -72,15 +73,16 @@
 import {onBeforeUnmount, onMounted, ref} from 'vue'
 import VueDatePicker from "@vuepic/vue-datepicker";
 import '@vuepic/vue-datepicker/dist/main.css';
-import {LogEntry} from "@/interfaces/LogEntry";
+import {LogEntryWithApplication} from "@/interfaces/LogEntry";
 import {LogTableResponse} from "@/interfaces/LogTableResponse";
-import {endOfMonth, endOfYear, startOfMonth, startOfYear, subMonths, subDays} from 'date-fns';
+import {endOfMonth, startOfMonth, startOfYear, subMonths, subDays} from 'date-fns';
 import {fetchWithAuth} from "@/utils";
 import {useAppStore} from "@/store/app";
 import router from "@/router";
 import {useRoute} from "vue-router";
+import ApplicationSelect from "@/components/ApplicationSelect.vue";
 
-const items = ref<LogEntry[]>([]);
+const items = ref<LogEntryWithApplication[]>([]);
 const store = useAppStore();
 
 const date_range_filter = ref<Date[]>([]);
@@ -89,13 +91,16 @@ const message_filter = ref<string>();
 const message_history = ref<string[]>([]);
 const module_filter = ref<string>();
 const module_history = ref<string[]>([]);
+const selected_apps = ref<string[]>(
+  JSON.parse(sessionStorage.getItem("selected_apps") || "[]")
+);
 
 const loading = ref(true);
 const itemsPerPage = ref(10);
 const totalItems = ref(0);
 const headers = ref([
   {title: "Index", align: "start", key: "index", sortable: false},
-  {title: "Timestamp", align: "start", key: "timestamp_formatted", sortable: false},
+  {title: "Timestamp (LOCAL)", align: "start", key: "timestamp_formatted", sortable: false},
   {title: "Level", align: "start", key: "level", sortable: false},
   {title: "Module", align: "start", key: "module", sortable: false},
   {title: "Message", align: "start", key: "message", sortable: false}
@@ -158,13 +163,21 @@ const load = async ({page, itemsPerPage}: { page: number, itemsPerPage: number }
   });
 
   if (date_range_filter.value !== null && date_range_filter.value.length > 0) {
-    search_params.append("start_timestamp", date_range_filter.value[0].toISOString());
+    // For whatever reason the datepicker returns a string instead of a Date object when using user selected date.
+    // For the preset dates it returns a Date object, so we need to convert here.
+    let start_date = date_range_filter.value[0];
+    let end_date = date_range_filter.value[1] !== null ? date_range_filter.value[1] : new Date();
 
-    if (date_range_filter.value[1] !== null) {
-      search_params.append("end_timestamp", date_range_filter.value[1].toISOString());
-    } else {
-      search_params.append("end_timestamp", new Date().toISOString());
+    if (typeof start_date === "string") {
+      start_date = new Date(start_date);
     }
+
+    if (typeof end_date === "string") {
+      end_date = new Date(end_date);
+    }
+
+    search_params.append("start_timestamp", start_date.toISOString());
+    search_params.append("end_timestamp", end_date.toISOString());
   }
 
   if (min_log_level_filter.value) {
@@ -179,14 +192,20 @@ const load = async ({page, itemsPerPage}: { page: number, itemsPerPage: number }
     search_params.append("module_name", module_filter.value);
   }
 
+  if (selected_apps.value.length > 0) {
+    sessionStorage.setItem("selected_apps", JSON.stringify(selected_apps.value));
+    selected_apps.value.forEach((app) => search_params.append("applications", app));
+  }
+
   const response: LogTableResponse = await fetchWithAuth("/api/log_table?" + search_params)
     .then((res) => res.json())
     .catch(() => {
     store.showSnackbar("Error fetching logs", "error");
   });
 
-  response.logs.map((item: LogEntry) => {
-    item.index = (page - 1) * itemsPerPage + response.logs.indexOf(item) + 1;
+  response.logs.map((item: LogEntryWithApplication) => {
+    item.entry.index = (page - 1) * itemsPerPage + response.logs.indexOf(item) + 1;
+    item.entry.timestamp = new Date(item.entry.timestamp).toLocaleString('en-GB');
   });
 
   items.value = response.logs

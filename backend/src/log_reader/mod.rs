@@ -7,7 +7,7 @@ use std::fs::File;
 use std::collections::HashMap;
 use std::fs::metadata;
 use std::io::{BufRead, BufReader};
-use log::{error, warn};
+use log::{debug, error, trace, warn};
 use std::sync::Arc;
 use config::{Value, ValueKind};
 use glob::glob;
@@ -24,10 +24,12 @@ pub enum TimeFormat<'a> {
     Custom(Vec<FormatItem<'a>>), 
 }
 
-pub async fn load_logs(buffer: Arc<RwLock<AllocRingBuffer<LogEntry>>>, cache: Arc<Mutex<HashMap<String, (std::time::SystemTime, usize)>>>) {
-    let mut log_buffer = buffer.write().await;
+pub async fn load_logs(buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntry>>>>, cache: Arc<Mutex<HashMap<String, (std::time::SystemTime, usize)>>>, i_to_app: Arc<Mutex<HashMap<usize, String>>>) {
+    let mut log_buffer_map = buffer.write().await;
     let mut log_files = Vec::new();
     let mut cache = cache.lock().await;
+    let mut i_to_app = i_to_app.lock().await;
+    let mut app_i;
 
     let apps = SETTINGS.read().await.get_array("application").unwrap_or_else(|_| vec![Value::new(None, create_default_map())]);
     
@@ -40,6 +42,14 @@ pub async fn load_logs(buffer: Arc<RwLock<AllocRingBuffer<LogEntry>>>, cache: Ar
             .clone()
             .into_string()
             .expect("Path is not a string!");
+        
+        if !i_to_app.values().any(|app_name| app_name == &app_path) {
+            let length = i_to_app.len();
+            app_i = length;
+            i_to_app.insert(length, app_path.clone());
+        } else {
+            app_i = *i_to_app.iter().find(|(_, app_name)| app_name == &&app_path).unwrap().0;
+        }
 
         let app_parser = Regex::new(&app_table
             .get("parser")
@@ -66,9 +76,11 @@ pub async fn load_logs(buffer: Arc<RwLock<AllocRingBuffer<LogEntry>>>, cache: Ar
             TimeFormat::Custom(format_desc)
         },
         };
+        
+        debug!("Loading logs for application: {}", app_path);
 
-
-        for log_file in glob(format!("{}/*.log", app_path).as_str()).expect("Failed to read glob pattern") {
+        for log_file in glob(format!("{}/*.log", app_path).as_str()).expect("Failed to read glob pattern")
+            .chain(glob(format!("{}/*.txt", app_path).as_str()).expect("Failed to read glob pattern")) {
             match log_file {
                 Ok(log_file) => {
                     log_files.push((log_file.clone(), get_modified_time(log_file.to_str().unwrap())));
@@ -86,6 +98,17 @@ pub async fn load_logs(buffer: Arc<RwLock<AllocRingBuffer<LogEntry>>>, cache: Ar
             }
         });
         log_files.sort_by(|a, b| b.1.cmp(&a.1));
+        
+        let log_buffer = log_buffer_map.entry(app_i).or_insert({
+            let app_buffer_size = app_table
+                .get("buffer_size")
+                .unwrap_or(&Value::new(None, ValueKind::U64(1_000_000)))
+                .clone()
+                .into_uint()
+                .expect("buffer_size is not parsable to an unsigned integer!");
+            
+            AllocRingBuffer::new(app_buffer_size as usize)
+        });
 
         for log_file in log_files.iter().rev() {
             let file = File::open(log_file.0.clone()).expect("Failed to open file");
@@ -100,8 +123,11 @@ pub async fn load_logs(buffer: Arc<RwLock<AllocRingBuffer<LogEntry>>>, cache: Ar
             for (i, line) in reader.lines().skip(lines_to_skip).enumerate() {
                 match line {
                     Ok(line) => {
-                        match parser::parse_entry(&line, &app_parser, &app_timeformat) {
-                            Ok(parse_result) => log_buffer.push(parse_result),
+                        match parser::parse_entry(&line, &app_parser, &app_timeformat, app_i) {
+                            Ok(parse_result) => {
+                                trace!("{:?}", parse_result);
+                                log_buffer.push(parse_result);
+                            },
                             Err(err) => {
                                 error!("{} on line {} in file {}", err, i + 1, log_file.0.to_str().unwrap());
                             }
@@ -142,6 +168,7 @@ fn create_default_map() -> ValueKind {
     map.insert("path".to_string(), Value::new(None, ValueKind::String("logpeek-logs".to_string())));
     map.insert("parser".to_string(), Value::new(None, ValueKind::String(r"^(?P<timestamp>\S+) (?P<level>\S+) (?P<module>\S+) - (?P<message>.+)$".to_string())));
     map.insert("timeformat".to_string(), Value::new(None, ValueKind::String("iso8601".to_string())));
+    map.insert("buffer_size".to_string(), Value::new(None, ValueKind::U64(1_000_000)));
 
     ValueKind::Table(map)
 }
