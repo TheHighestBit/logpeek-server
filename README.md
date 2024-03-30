@@ -79,6 +79,8 @@ The main reason this isn't implemented already is that the config library that i
 
 
 - [ ] **Reduce binary size.**  The current application is written without much regard for it's size. A lot of bloat can be removed.
+
+- [ ] **Add support apps that log to a single file.** Currently, logpeek-server expects the log files to be split and placed in the same directory. Support for cases when an app is only logging to a single file, eg. to /var/log should be added.
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
