@@ -5,21 +5,22 @@ Performant, web based log tail explorer written in Rust.
 ## Features
 
 - **Web based frontend.** Allows for remote monitoring over the network.
-- **Regex based search.** Regex is supported for both module and message filters.
 - **Built-in dashboard.** Contains system information, error count per hour over the last 24h and more.
-- **Performance first.** All log entries are kept in memory allowing for instant filtering. The amount is up to you.
+- **Performance first.** All log entries are kept in memory allowing for instant filtering. The exact amount is up to you.
 - **Unlimited number of applications.** Each application is configured separately, allowing for processing of log entries with different structures.
 - **Portability.** Distributed as a standalone binary. No installation required.
+- **Regex based search.** Regex is supported for both module and message filters.
 - **Out-of-the-box compatibility with the [logpeek] crate.** When using `logpeek` as the logger in your Rust application, the generated logs will be compatible by default.
 
 [logpeek]: https://crates.io/crates/logpeek
 ## Limitations
-- All log entries must contain a timestamp, a log level, a module where the log entry originated from and the log message.
+- logpeek-server is not meant for historical filtering of ALL the logs. Due to the in memory log storage, it should only ever be used to monitor the log tail.
+The size of this tail is configurable via the `application.buffer_size` key in `config.toml`. The aim should be to store the last 7 days worth of logs.
 - Timestamps in the log entries must contain the offset in respect to UTC (should be the case in the vast majority of loggers).
 
 ## Getting Started
 
-### Installing
+### Installation
 
 You can find pre-built binaries for Linux, Windows and macOS on the [releases page].
 
@@ -80,7 +81,9 @@ The main reason this isn't implemented already is that the config library that i
 
 - [ ] **Reduce binary size.**  The current application is written without much regard for it's size. A lot of bloat can be removed.
 
-- [ ] **Add support apps that log to a single file.** Currently, logpeek-server expects the log files to be split and placed in the same directory. Support for cases when an app is only logging to a single file, eg. to /var/log should be added.
+
+- [ ] **Add parsers for common log formats as options on the configuration page.** Altough regex is very powerful and flexible,
+it can be a bit intimidating for some users. Having a dropdown with common log formats would make the setup process easier.
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
