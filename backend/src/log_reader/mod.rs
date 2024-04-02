@@ -7,6 +7,7 @@ use std::fs::File;
 use std::collections::HashMap;
 use std::fs::metadata;
 use std::io::{BufRead, BufReader};
+use std::path::PathBuf;
 use log::{debug, error, trace, warn};
 use std::sync::Arc;
 use config::{Value, ValueKind};
@@ -59,12 +60,11 @@ pub async fn load_logs(buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntr
             .expect("Parser is not a string!")).expect("Failed to compile regex!");
 
 
-        let configured_timeformat = app_table
-            .get("timeformat")
-            .expect("An application is missing the timeformat field in the config!")
-            .clone()
-            .into_string()
-            .expect("Timeformat is not a string!");
+        let configured_timeformat = if let Some(configured_timeformat) = app_table.get("timeformat") {
+            configured_timeformat.clone().to_string()
+        } else {
+            "iso8601".to_string()
+        };
         
 
         let app_timeformat = match configured_timeformat.as_str() {
@@ -79,13 +79,21 @@ pub async fn load_logs(buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntr
         
         debug!("Loading logs for application: {}", app_path);
 
-        for log_file in glob(format!("{}/*.log", app_path).as_str()).expect("Failed to read glob pattern")
-            .chain(glob(format!("{}/*.txt", app_path).as_str()).expect("Failed to read glob pattern")) {
-            match log_file {
-                Ok(log_file) => {
-                    log_files.push((log_file.clone(), get_modified_time(log_file.to_str().unwrap())));
-                },
-                Err(e) => error!("Failed to read log file! {:?}", e),
+        if metadata(&app_path).expect("Failed to read metadata for log file").is_file() {
+            log_files.push((PathBuf::from(app_path.clone()), get_modified_time(&app_path)));
+        } else {
+            for log_file in glob(format!("{}/**/*", &app_path).as_str()).expect("Failed to read glob pattern") {
+                if let Ok(path) = log_file {
+                    if let Ok(metadata) = metadata(&path) {
+                        if metadata.is_file() {
+                            log_files.push((path.clone(), get_modified_time(path.to_str().unwrap())));
+                        }
+                    } else {
+                        error!("Failed to read log file metadata! {:?}", path);
+                    }
+                } else {
+                    error!("Failed to read log file! {:?}", log_file);
+                }
             }
         }
 
@@ -111,6 +119,7 @@ pub async fn load_logs(buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntr
         });
 
         for log_file in log_files.iter().rev() {
+            debug!("Reading log file: {}", log_file.0.to_str().unwrap());
             let file = File::open(log_file.0.clone()).expect("Failed to open file");
             let reader = BufReader::new(file);
             let mut line_count = 0;

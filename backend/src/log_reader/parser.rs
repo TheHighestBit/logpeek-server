@@ -12,20 +12,31 @@ use crate::LogEntry;
 pub enum LogParseError {
     #[error("No capture groups found in line: {0}")]
     NoCaptureGroupsFound(String),
-    #[error("Invalid log level: {0}")]
-    InvalidLogLevel(String),
-    #[error("Invalid timestamp: {0}")]
-    InvalidTimestamp(String),
     #[error("Invalid message: {0}")]
     InvalidMessage(String),
 }
 
 pub fn parse_entry(line: &str, parser_re: &Regex, timeformat: &TimeFormat, app_i: usize) -> Result<LogEntry> {
     if let Some(caps) = parser_re.captures(line) {
-        let timestamp = caps.name("timestamp").ok_or_else(|| LogParseError::InvalidTimestamp(line.to_string()))?.as_str();
-        let level = caps.name("level").ok_or_else(|| LogParseError::InvalidLogLevel(line.to_string()))?.as_str();
-        let module = caps.name("module").ok_or_else(|| LogParseError::InvalidMessage(line.to_string()))?.as_str();
-        let message = caps.name("message").ok_or_else(|| LogParseError::InvalidMessage(line.to_string()))?.as_str();
+        let timestamp = if let Some(timestamp) = caps.name("timestamp") {
+            timestamp.as_str()
+        } else {
+            "2000-01-01T00:00:00.000Z"
+        };
+
+        let level = if let Some(level) = caps.name("level") {
+            level.as_str()
+        } else {
+            "INFO"
+        };
+
+        let module = if let Some(module) = caps.name("module") {
+            module.as_str()
+        } else {
+            "N/A"
+        };
+
+        let message = caps.name("message").ok_or_else(|| LogParseError::InvalidMessage(line.to_string()))?.as_str(); // Is required
 
         Ok(LogEntry {
             timestamp: match timeformat {
