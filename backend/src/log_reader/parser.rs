@@ -19,9 +19,14 @@ pub enum LogParseError {
 pub fn parse_entry(line: &str, parser_re: &Regex, timeformat: &TimeFormat, app_i: usize) -> Result<LogEntry> {
     if let Some(caps) = parser_re.captures(line) {
         let timestamp = if let Some(timestamp) = caps.name("timestamp") {
-            timestamp.as_str()
+            match timeformat {
+                TimeFormat::Iso8601 => OffsetDateTime::parse(timestamp.as_str(), &Iso8601::DEFAULT)?,
+                TimeFormat::Rfc2822 => OffsetDateTime::parse(timestamp.as_str(), &time::format_description::well_known::Rfc2822)?,
+                TimeFormat::Rfc3339 => OffsetDateTime::parse(timestamp.as_str(), &time::format_description::well_known::Rfc3339)?,
+                TimeFormat::Custom(format_desc) => OffsetDateTime::parse(timestamp.as_str(), &format_desc)?,
+            }
         } else {
-            "2000-01-01T00:00:00.000Z"
+            OffsetDateTime::now_utc()
         };
 
         let level = if let Some(level) = caps.name("level") {
@@ -39,12 +44,7 @@ pub fn parse_entry(line: &str, parser_re: &Regex, timeformat: &TimeFormat, app_i
         let message = caps.name("message").ok_or_else(|| LogParseError::InvalidMessage(line.to_string()))?.as_str(); // Is required
 
         Ok(LogEntry {
-            timestamp: match timeformat {
-                TimeFormat::Iso8601 => OffsetDateTime::parse(timestamp, &Iso8601::DEFAULT)?,
-                TimeFormat::Rfc2822 => OffsetDateTime::parse(timestamp, &time::format_description::well_known::Rfc2822)?,
-                TimeFormat::Rfc3339 => OffsetDateTime::parse(timestamp, &time::format_description::well_known::Rfc3339)?,
-                TimeFormat::Custom(format_desc) => OffsetDateTime::parse(timestamp, &format_desc)?,
-            },
+            timestamp,
             level: log::Level::from_str(level)?,
             module: module.to_string(),
             message: message.to_string(),
