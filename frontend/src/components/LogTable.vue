@@ -96,7 +96,7 @@ const selected_apps = ref<string[]>(
 );
 
 const loading = ref(true);
-const itemsPerPage = ref(10);
+const itemsPerPage = ref(100);
 const totalItems = ref(0);
 const headers = ref([
   {title: "Index", align: "start", key: "index", sortable: false},

@@ -52,7 +52,7 @@ lazy_static! {
 pub async fn run() {
     // Logger setup
     let logger_config = logpeek::config::Config {
-        min_log_level: match SETTINGS.read().await.get_bool("main.logger.debug").unwrap_or(false) {
+        min_log_level: match SETTINGS.read().await.get_bool("main.logger.enable_debug").unwrap_or(false) {
             true => LevelFilter::Debug,
             false => LevelFilter::Info
         },
@@ -71,7 +71,7 @@ pub async fn run() {
     let cache = Arc::new(Mutex::new(HashMap::new()));
     let i_to_app = Arc::new(Mutex::new(HashMap::new()));
 
-    log_reader::load_logs(log_buffer.clone(), cache.clone(), i_to_app.clone()).await;
+    log_reader::load_logs(log_buffer.clone(), cache.clone(), i_to_app.clone(), true).await;
     let loaded_count = log_buffer.read().await.iter().map(|(_, buffer)| buffer.len()).sum::<usize>();
     info!("Loaded {} log entries for {} applications", loaded_count, log_buffer.read().await.len());
 

@@ -10,6 +10,7 @@ use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use log::{debug, error, trace, warn};
 use std::sync::Arc;
+use std::time::Duration;
 use config::{Value, ValueKind};
 use glob::glob;
 use regex::Regex;
@@ -25,7 +26,7 @@ pub enum TimeFormat<'a> {
     Custom(Vec<FormatItem<'a>>), 
 }
 
-pub async fn load_logs(buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntry>>>>, cache: Arc<Mutex<HashMap<String, (std::time::SystemTime, usize)>>>, i_to_app: Arc<Mutex<HashMap<usize, String>>>) {
+pub async fn load_logs(buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntry>>>>, cache: Arc<Mutex<HashMap<String, (std::time::SystemTime, usize)>>>, i_to_app: Arc<Mutex<HashMap<usize, String>>>, is_init: bool) {
     let mut log_buffer_map = buffer.write().await;
     let mut log_files = Vec::new();
     let mut cache = cache.lock().await;
@@ -97,16 +98,6 @@ pub async fn load_logs(buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntr
             }
         }
 
-        // Filter out files that haven't been modified since the last time we read them
-        log_files.retain(|file| {
-            let (path, modified_time) = file;
-            match cache.get(path.to_str().unwrap()) {
-                Some((cache_time, _)) => modified_time > cache_time,
-                None => true,
-            }
-        });
-        log_files.sort_by(|a, b| b.1.cmp(&a.1));
-        
         let log_buffer = log_buffer_map.entry(app_i).or_insert({
             let app_buffer_size = app_table
                 .get("buffer_size")
@@ -114,8 +105,51 @@ pub async fn load_logs(buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntr
                 .clone()
                 .into_uint()
                 .expect("buffer_size is not parsable to an unsigned integer!");
-            
+
             AllocRingBuffer::new(app_buffer_size as usize)
+        });
+        
+        log_files.sort_by(|a, b| b.1.cmp(&a.1)); // Newest files first
+
+        if is_init {
+            // During first load we need to first exclude files that would fall outside the buffer.
+            // These files will be inserted into the cache and not processed.
+
+            let mut total_line_count: usize = 0;
+            let buffer_size = log_buffer.capacity();
+            let mut file_iterator = log_files.iter(); // Starting from the newest file
+
+            while total_line_count < buffer_size {
+                let log_file = match file_iterator.next() {
+                    Some(file) => file,
+                    None => break,
+                };
+                
+                debug!("Counting lines in log file: {}", log_file.0.to_str().unwrap());
+
+                let file_line_count = BufReader::new(File::open(log_file.0.clone()).expect("Failed to open file")).lines().count();
+                if total_line_count + file_line_count >= buffer_size { // This is the earliest file we need to read from
+                    // Bump the cache time so that the following retain call will include it 
+                    cache.insert(log_file.0.to_str().unwrap().to_string(), (log_file.1.checked_sub(Duration::from_secs(1)).unwrap(), file_line_count - (buffer_size - total_line_count)));
+                    break;
+                } else {
+                    total_line_count += file_line_count;
+                }
+            }
+
+            // Add the rest to cache
+            for log_file in file_iterator {
+                cache.insert(log_file.0.to_str().unwrap().to_string(), (log_file.1, 0));
+            }
+        }
+
+        // Filter out files that haven't been modified since the last time we read them
+        log_files.retain(|file| {
+            let (path, modified_time) = file;
+            match cache.get(path.to_str().unwrap()) {
+                Some((cache_time, _)) => modified_time > cache_time,
+                None => true,
+            }
         });
 
         for log_file in log_files.iter().rev() {

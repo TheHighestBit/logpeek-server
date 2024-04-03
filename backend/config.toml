@@ -20,7 +20,7 @@ buffer_update_cooldown = 10
 
 [main.logger]
 # When true, sets the minimum log level to debug
-debug = false
+enable_debug = false
 
 # Whether to write log files
 log_to_file = true
