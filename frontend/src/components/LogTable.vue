@@ -49,7 +49,7 @@
       :items-length="totalItems"
       :items="items"
       :loading="loading"
-      :items-per-page-options="[10, 25, 100, 500, 1000]"
+      :items-per-page-options="[25, 100, 500, 1000]"
       @update:options="load"
     >
       <template v-slot:item="i">

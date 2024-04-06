@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
 use serde::Serialize;
 use std::sync::Arc;
+use std::time::SystemTime;
 use time::OffsetDateTime;
 use axum::Router;
 use axum_server::tls_rustls::RustlsConfig;
@@ -70,10 +71,11 @@ pub async fn run() {
     let log_buffer = Arc::new(RwLock::new(HashMap::new()));
     let cache = Arc::new(Mutex::new(HashMap::new()));
     let i_to_app = Arc::new(Mutex::new(HashMap::new()));
-
+    
+    let load_start = SystemTime::now();
     log_reader::load_logs(log_buffer.clone(), cache.clone(), i_to_app.clone(), true).await;
     let loaded_count = log_buffer.read().await.iter().map(|(_, buffer)| buffer.len()).sum::<usize>();
-    info!("Loaded {} log entries for {} applications", loaded_count, log_buffer.read().await.len());
+    info!("Loaded {} log entries for {} applications in {:?}", loaded_count, log_buffer.read().await.len(), load_start.elapsed().unwrap());
 
     // Initialize the system info
     let sys = Arc::new(Mutex::new(System::new_with_specifics(
