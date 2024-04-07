@@ -4,7 +4,7 @@
     <v-row class="flex-wrap pt-2 mb-n5">
       <v-col sm="5" lg="2" class="ml-2">
         <VueDatePicker v-model="date_range_filter" range utc time-picker-inline dark :preset-dates="presetDates"
-        placeholder="Select Timerange" :max-date="new Date()">
+        placeholder="Select Timerange" :max-date="new Date()" @update:model-value="refresh_table">
           <template #preset-date-range-button="{ label, value, presetDate }">
             <span
               role="button"
@@ -19,7 +19,7 @@
       </v-col>
       <v-col sm="2" md="2" lg="1">
         <v-select v-model="min_log_level_filter" clearable variant="outlined" label="Min log level"
-                  :items="['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR']" density="compact"></v-select>
+                  :items="['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR']" density="compact" @update:modelValue="refresh_table"></v-select>
       </v-col>
       <v-col>
         <v-combobox v-model="message_filter"
