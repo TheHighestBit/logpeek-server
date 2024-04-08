@@ -56,7 +56,7 @@ timeformat = "iso8601"
 buffer_size = 1_000_000
 ```
 Writing the regex parser was as simple as moving around the capture groups in the example found in `config.toml` and adding the separating words.
-For more complex formats, you might need to modify the regex a little bit more.
+For more complex formats, you might need to modify the regex a little bit more or have the message field capture the entire line.
 
 For another example, let's also enable authentication by setting the secret in `config.toml` and a better maximum number of login attempts:
 ```toml
