@@ -22,20 +22,20 @@
                   :items="['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR']" density="compact" @update:modelValue="refresh_table"></v-select>
       </v-col>
       <v-col>
-        <v-combobox v-model="message_filter"
-                    clearable
-                    variant="outlined"
-                    label="Message"
-                    density="compact"
-                    :items="message_history"></v-combobox>
-      </v-col>
-      <v-col>
         <v-combobox v-model="module_filter"
                     clearable
                     variant="outlined"
                     label="Module"
                     :items="module_history"
                     density="compact"></v-combobox>
+      </v-col>
+      <v-col>
+        <v-combobox v-model="message_filter"
+                    clearable
+                    variant="outlined"
+                    label="Message"
+                    density="compact"
+                    :items="message_history"></v-combobox>
       </v-col>
       <v-col class="mr-5" sm="2" lg="1" align="end">
         <v-btn class="mb-n3" color="#6716bd" variant="elevated" :onclick="refresh_table">Refresh</v-btn>
