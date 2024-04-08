@@ -23,8 +23,8 @@ pub struct DashboardResponse {
     total_logs_week: [u32; 7],
     error_logs_week: [u32; 7],
     warning_logs_week: [u32; 7],
-    top_modules_24: Vec<(String, u32)>,
-    top_modules_week: Vec<(String, u32)>,
+    top_modules_24: Vec<(String, f32)>,
+    top_modules_week: Vec<(String, f32)>,
     log_buffer_usage: f32,
     total_log_entries: u32,
 }
@@ -48,7 +48,7 @@ pub async fn dashboard_info_handler(Query(params): Query<Params>, State(shared_s
     let mut error_logs_week: [u32; 7] = [0; 7];
     let mut warning_logs_week: [u32; 7] = [0; 7];
     let mut module_counter_tree: BTreeMap<String, u32> = BTreeMap::new();
-    let mut top_modules_24: Vec<(String, u32)> = Vec::new();
+    let mut top_modules_24: Vec<(String, f32)> = Vec::new();
     let mut flag_24 = false;
 
     let log_buffer_map = shared_state.log_buffer.read().await;
@@ -106,8 +106,8 @@ pub async fn dashboard_info_handler(Query(params): Query<Params>, State(shared_s
             module_count.sort_by(|a, b| b.1.cmp(&a.1));
 
             let total_24_errors = error_logs_24.iter().sum::<u32>();
-            top_modules_24 = module_count.into_iter().take(5)
-                .map(|(module, count)| (module, count * 100 / total_24_errors))
+            top_modules_24 = module_count.iter().take(5)
+                .map(|(module, count)| (module.clone(), *count as f32 * 100.0 / total_24_errors as f32))
                 .collect();
 
             flag_24 = true;
@@ -134,8 +134,8 @@ pub async fn dashboard_info_handler(Query(params): Query<Params>, State(shared_s
     module_count.sort_by(|a, b| b.1.cmp(&a.1));
 
     let total_week_errors = error_logs_week.iter().sum::<u32>();
-    let top_modules_week: Vec<(String, u32)> = module_count.into_iter().take(5)
-        .map(|(module, count)| (module, count * 100 / total_week_errors))
+    let top_modules_week: Vec<(String, f32)> = module_count.into_iter().take(5)
+        .map(|(module, count)| (module, count as f32 * 100.0 / total_week_errors as f32))
         .collect();
     
     // Special case when all logs are from past 24h
