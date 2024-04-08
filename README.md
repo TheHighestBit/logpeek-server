@@ -13,6 +13,15 @@ Performant, web based log tail explorer written in Rust.
 - **Out-of-the-box compatibility with the [logpeek] crate.** When using `logpeek` as the logger in your Rust application, the generated logs will be compatible by default.
 
 [logpeek]: https://crates.io/crates/logpeek
+
+## Screenshots
+*Dashboard view*
+![image](https://github.com/TheHighestBit/logpeek-server/assets/40504459/2ce50a13-f94d-4a48-91e4-aff944bcd025)
+
+*Log table view*
+![image](https://github.com/TheHighestBit/logpeek-server/assets/40504459/8b21c7c8-61ea-45a5-b557-be567618ceb6)
+
+
 ## Limitations
 - logpeek-server is not meant for historical filtering of ALL the logs. Due to the in memory log storage, it should only ever be used to monitor the log tail.
 The size of this tail is configurable via the `application.buffer_size` key in `config.toml`. The aim should be to store the last 7 days worth of logs.
