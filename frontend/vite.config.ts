@@ -46,5 +46,6 @@ export default defineConfig({
   },
   build: {
     outDir: '../backend/src/dist',
+    emptyOutDir: true,
   }
 })
