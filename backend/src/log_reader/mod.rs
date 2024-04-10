@@ -14,6 +14,7 @@ use std::time::Duration;
 use config::{Value, ValueKind};
 use glob::glob;
 use regex::Regex;
+use sysinfo::System;
 
 use tokio::sync::{Mutex, RwLock};
 use crate::LogEntry;
@@ -26,7 +27,9 @@ pub enum TimeFormat<'a> {
     Custom(Vec<FormatItem<'a>>), 
 }
 
-pub async fn load_logs(buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntry>>>>, cache: Arc<Mutex<HashMap<String, (std::time::SystemTime, usize)>>>, i_to_app: Arc<Mutex<HashMap<usize, String>>>, is_init: bool) {
+pub async fn load_logs(buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntry>>>>, cache: Arc<Mutex<HashMap<String,
+    (std::time::SystemTime, usize)>>>, i_to_app: Arc<Mutex<HashMap<usize, String>>>, sysinfo: Arc<Mutex<System>>, is_init: bool) {
+    
     let mut log_buffer_map = buffer.write().await;
     let mut log_files = Vec::new();
     let mut cache = cache.lock().await;
@@ -105,6 +108,21 @@ pub async fn load_logs(buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntr
                 .clone()
                 .into_uint()
                 .expect("buffer_size is not parsable to an unsigned integer!");
+            
+            // This memory check is expensive, but it is only done once during initialization
+            let memory_required = get_memory_required::<LogEntry>(app_buffer_size);
+            let mut sys = sysinfo.lock().await;
+            let available_memory = get_available_memory(&mut sys);
+
+            if available_memory < memory_required {
+                panic!("{} MB is required to allocate an application's buffer, which is more than the currently available memory of {} MB!", 
+                       memory_required / 1_048_576, available_memory / 1_048_576);
+            } else if available_memory < memory_required * 2 {
+                warn!("{} MB is required to allocate an application's buffer, which is more than half of the currently available memory! \
+                Consider reducing the buffer sizes to avoid runtime out-of-memory issues.", memory_required / 1_048_576);
+            } else {
+                debug!("{} MB is required for application {}", memory_required / 1_048_576, &app_path);
+            }
 
             AllocRingBuffer::new(app_buffer_size as usize)
         });
@@ -214,4 +232,13 @@ fn create_default_map() -> ValueKind {
     map.insert("buffer_size".to_string(), Value::new(None, ValueKind::U64(1_000_000)));
 
     ValueKind::Table(map)
+}
+
+fn get_available_memory(sysinfo: &mut System) -> u64 {
+    sysinfo.refresh_memory();
+    sysinfo.total_memory() - sysinfo.used_memory()
+}
+
+fn get_memory_required<T>(buffer_size: u64) -> u64 {
+    buffer_size * std::mem::size_of::<T>() as u64
 }

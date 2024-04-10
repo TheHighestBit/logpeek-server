@@ -62,7 +62,7 @@ pub async fn buffer_refresh_middleware(State(shared_state): State<SharedState>, 
 
     // force-refresh header is only set by the force refresh button in the frontend
     if req.headers().contains_key("force-refresh") || last_buffer_update.elapsed().unwrap_or_else(|_| Duration::from_secs(15)) > update_cooldown {
-        load_logs(shared_state.log_buffer.clone(), shared_state.cache.clone(), shared_state.i_to_app.clone(), false).await;
+        load_logs(shared_state.log_buffer.clone(), shared_state.cache.clone(), shared_state.i_to_app.clone(), shared_state.sys.clone(), false).await;
         *last_buffer_update = SystemTime::now();
 
         debug!("Log entries updated");

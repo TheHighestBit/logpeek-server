@@ -71,11 +71,6 @@ pub async fn run() {
     let log_buffer = Arc::new(RwLock::new(HashMap::new()));
     let cache = Arc::new(Mutex::new(HashMap::new()));
     let i_to_app = Arc::new(Mutex::new(HashMap::new()));
-    
-    let load_start = SystemTime::now();
-    log_reader::load_logs(log_buffer.clone(), cache.clone(), i_to_app.clone(), true).await;
-    let loaded_count = log_buffer.read().await.iter().map(|(_, buffer)| buffer.len()).sum::<usize>();
-    info!("Loaded {} log entries for {} applications in {:?}", loaded_count, log_buffer.read().await.len(), load_start.elapsed().unwrap());
 
     // Initialize the system info
     let sys = Arc::new(Mutex::new(System::new_with_specifics(
@@ -85,6 +80,11 @@ pub async fn run() {
     )));
     let os = System::long_os_version().unwrap_or_default();
     let host_name = System::host_name().unwrap_or_default();
+    
+    let load_start = SystemTime::now();
+    log_reader::load_logs(log_buffer.clone(), cache.clone(), i_to_app.clone(), sys.clone(), true).await;
+    let loaded_count = log_buffer.read().await.iter().map(|(_, buffer)| buffer.len()).sum::<usize>();
+    info!("Loaded {} log entries for {} applications in {:?}", loaded_count, log_buffer.read().await.len(), load_start.elapsed().unwrap());
 
     let shared_state = SharedState {
         log_buffer,
