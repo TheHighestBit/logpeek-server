@@ -1,14 +1,14 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap};
 
 use axum::extract::State;
 use axum::Json;
 use axum_extra::extract::Query;
 use log::{debug, trace};
-use ringbuffer::RingBuffer;
+use ringbuffer::{RingBuffer};
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
-use crate::{convert_app_to_i, LogEntry, SharedState};
+use crate::{convert_app_to_i, LogBufferIterator, SharedState};
 
 #[derive(Debug, Deserialize)]
 pub struct Params {
@@ -40,7 +40,7 @@ pub async fn dashboard_info_handler(Query(params): Query<Params>, State(shared_s
 
     debug!("Applications filter after conversion: {:?}", applications);
 
-    let current_time = time::OffsetDateTime::now_utc();
+    let current_time = OffsetDateTime::now_utc();
     let mut total_logs_24: [u32; 24] = [0; 24];
     let mut error_logs_24: [u32; 24] = [0; 24];
     let mut warning_logs_24: [u32; 24] = [0; 24];
@@ -52,41 +52,9 @@ pub async fn dashboard_info_handler(Query(params): Query<Params>, State(shared_s
     let mut flag_24 = false;
 
     let log_buffer_map = shared_state.log_buffer.read().await;
-    let mut iterators = log_buffer_map.iter().filter(|entry| applications.is_empty() || applications.contains(&entry.0))
-        .map(|entry| entry.1.iter().rev().peekable())
-        .collect::<Vec<_>>();
+    let buffer_iterator = LogBufferIterator::new(&log_buffer_map, &applications);
     
-    loop {
-        // First we need to find which buffer has the latest log entry
-        let entry: &LogEntry;
-        let mut latest_time: Option<&OffsetDateTime> = None;
-        let mut index: usize = 0;
-        
-        for (i, iterator) in iterators.iter_mut().enumerate() {
-            if let Some(peeked) = iterator.peek() {
-                if let Some(current_latest) = latest_time {
-                    if peeked.timestamp > *current_latest {
-                        latest_time = Some(&peeked.timestamp);
-                        index = i;
-                    }
-                } else {
-                    latest_time = Some(&peeked.timestamp);
-                    index = i;
-                }
-            }
-        }
-        
-        if latest_time.is_some() {
-            entry = iterators[index].next().unwrap(); // This unwrap is safe
-        } else {
-            break;
-        }
-        
-        // No need to process logs older than 7 days
-        if entry.timestamp < current_time - time::Duration::days(7) {
-            break;
-        }
-
+    for entry in buffer_iterator.take_while(|entry| entry.timestamp >= current_time - time::Duration::days(7)) {
         if entry.timestamp > current_time - time::Duration::hours(24) {
             let hour: usize = (current_time - entry.timestamp).whole_hours() as usize;
             match entry.level {

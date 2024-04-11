@@ -7,11 +7,10 @@ use axum::Json;
 use axum::extract::State;
 use axum_extra::extract::Query;
 use axum::http::StatusCode;
-use ringbuffer::{RingBuffer};
 use time::OffsetDateTime;
 
 
-use crate::{convert_app_to_i, LogEntry, SharedState};
+use crate::{convert_app_to_i, LogBufferIterator, LogEntry, SharedState};
 
 #[derive(Debug, Deserialize)]
 pub struct Params {
@@ -131,10 +130,7 @@ impl LogFilter {
 
 pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state): State<SharedState>) -> (StatusCode, Json<LogTableResponse>) {
     trace!("Request received {:?}", &params);
-    
-    // This logic is also in dashboard_info_handler but refactoring it is not so easy.
-    // I gave up on trying, the ringbuffer has a private iterator type and my Rust skills
-    // are not up to snuff for that case. Maybe somebody smarter than I can do it...
+
     let i_to_app = shared_state.i_to_app.lock().await;
     let applications = if let Some(param_applications) = &params.applications {
         convert_app_to_i(param_applications, &i_to_app)
@@ -147,52 +143,26 @@ pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state)
     match log_filter_result {
         Ok(log_filter) => {
             let log_buffer_map = shared_state.log_buffer.read().await;
-            let mut iterators = log_buffer_map.iter().filter(|entry| applications.is_empty() || applications.contains(&entry.0))
-                .map(|entry| entry.1.iter().rev().peekable())
-                .collect::<Vec<_>>();
+            let buffer_iterator = LogBufferIterator::new(&log_buffer_map, &applications);
             
             let mut result: Vec<LogEntryWithApplication> = Vec::new();
             let mut skipped: usize = 0;
             let mut taken: usize = 0;
             let mut total_items: usize = 0;
 
-            loop {
-                let entry: &LogEntry;
-                let mut latest_time: Option<&OffsetDateTime> = None;
-                let mut index: usize = 0;
-                
-                for (i, iterator) in iterators.iter_mut().enumerate() {
-                    if let Some(peeked) = iterator.peek() {
-                        if let Some(current_latest) = latest_time {
-                            if peeked.timestamp > *current_latest {
-                                latest_time = Some(&peeked.timestamp);
-                                index = i;
-                            }
-                        } else {
-                            latest_time = Some(&peeked.timestamp);
-                            index = i;
-                        }
-                    }
-                }
+            for entry in buffer_iterator {
+                if log_filter.matches(entry) {
+                    total_items += 1;
 
-                if latest_time.is_some() {
-                    entry = iterators[index].next().unwrap();
-                    
-                    if log_filter.matches(entry) {
-                        total_items += 1;
-                        
-                        if skipped < log_filter.index {
-                            skipped += 1;
-                        } else if taken < log_filter.items_per_page {
-                            result.push(LogEntryWithApplication {
-                                entry: entry.clone(),
-                                application: i_to_app.get(&entry.application).unwrap().clone(),
-                            });
-                            taken += 1;
-                        }
+                    if skipped < log_filter.index {
+                        skipped += 1;
+                    } else if taken < log_filter.items_per_page {
+                        result.push(LogEntryWithApplication {
+                            entry: entry.clone(),
+                            application: i_to_app.get(&entry.application).unwrap().clone(),
+                        });
+                        taken += 1;
                     }
-                } else {
-                    break;
                 }
             }
 
