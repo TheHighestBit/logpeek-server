@@ -50,6 +50,7 @@ struct LogFilter {
     message: Option<regex::Regex>,
     start_timestamp: Option<OffsetDateTime>,
     end_timestamp: Option<OffsetDateTime>,
+    is_passtrough: bool,
 }
 
 impl LogFilter {
@@ -82,6 +83,9 @@ impl LogFilter {
         let end_timestamp = end_timestamp.as_ref().map(|end_timestamp| {
             OffsetDateTime::parse(end_timestamp, &time::format_description::well_known::Iso8601::DEFAULT)
         }).transpose()?;
+        
+        // All possible entries will match the filter
+        let is_passtrough = module_name.is_none() && message.is_none() && start_timestamp.is_none() && end_timestamp.is_none();
 
         Ok(Self {
             index,
@@ -91,9 +95,14 @@ impl LogFilter {
             message,
             start_timestamp,
             end_timestamp,
+            is_passtrough,
         })
     }
     fn matches(&self, entry: &LogEntry) -> bool {
+        if self.is_passtrough {
+            return true;
+        }
+        
         if let Some(min_log_level) = self.min_log_level {
             if entry.level > min_log_level {
                 return false;
