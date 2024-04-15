@@ -140,19 +140,17 @@ pub fn convert_app_to_i(apps: &[String], i_to_app: &MutexGuard<HashMap<usize, St
 
 // This iterator yields the most recent log entry across all the buffers
 struct LogBufferIterator<'a> {
-    buffers: Vec<&'a AllocRingBuffer<LogEntry>>,
-    indexes: Vec<isize>,
+    buffers: Vec<(&'a AllocRingBuffer<LogEntry>, isize)>,
 }
 
 impl<'a> LogBufferIterator<'a> {
     fn new(buffer_map: &'a HashMap<usize, AllocRingBuffer<LogEntry>>, app_filter: &[usize]) -> Self {
         let buffers = buffer_map.iter()
             .filter(|entry| app_filter.is_empty() || app_filter.contains(entry.0))
-            .map(|entry| entry.1).collect();
+            .map(|entry| (entry.1, -1)).collect();
 
         LogBufferIterator {
-            buffers,
-            indexes: vec![-1; buffer_map.len()],
+            buffers
         }
     }
 }
@@ -163,31 +161,29 @@ impl<'a> Iterator for LogBufferIterator<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         let mut latest_time: Option<&OffsetDateTime> = None;
         let mut latest_entry: Option<&LogEntry> = None;
-        let mut index: usize = 0;
+        let mut index: Option<usize> = None;
 
         for (i, buffer) in self.buffers.iter().enumerate() {
-            if let Some(entry) = buffer.get_signed(self.indexes[i]) { // -1 is the most recent entry, -2 is the second most recent, etc.
+            if let Some(entry) = buffer.0.get_signed(buffer.1) { // -1 is the most recent entry, -2 is the second most recent, etc.
                 if let Some(current_latest) = latest_time {
                     if entry.timestamp > *current_latest {
                         latest_time = Some(&entry.timestamp);
                         latest_entry = Some(entry);
-                        index = i;
+                        index = Some(i);
                     }
                 } else {
                     latest_time = Some(&entry.timestamp);
                     latest_entry = Some(entry);
-                    index = i;
+                    index = Some(i);
                 }
             }
         }
 
-        if !self.indexes.is_empty() {
-            self.indexes[index] -= 1;
+        if let Some(i) = index {
+            self.buffers[i].1 -= 1;
             
-            // Need to manually check if we have reached the end of the buffer
-            if self.indexes[index] < -(self.buffers[index].len() as isize) {
-                self.buffers.remove(index);
-                self.indexes.remove(index);
+            if self.buffers[i].1 < -(self.buffers[i].0.len() as isize) {
+                self.buffers.remove(i);
             }
         }
         
