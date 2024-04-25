@@ -6,7 +6,7 @@ Performant, web based log tail explorer written in Rust.
 
 - **Web based frontend.** Allows for remote monitoring over the network.
 - **Built-in dashboard.** Contains system information, error count per hour over the last 24h and more.
-- **Performance first.** All log entries are kept in memory allowing for instant filtering. The exact amount is up to you.
+- **Performance first.** Log entries are kept in memory allowing for instant filtering. The exact amount is configurable.
 - **Unlimited number of applications.** Each application is configured separately, allowing for processing of log entries with different structures.
 - **Portability.** Distributed as a standalone binary. No installation required.
 - **Regex based search.** Regex is supported for both module and message filters.
@@ -20,12 +20,6 @@ Performant, web based log tail explorer written in Rust.
 
 *Log table view*
 ![image](https://github.com/TheHighestBit/logpeek-server/assets/40504459/8b21c7c8-61ea-45a5-b557-be567618ceb6)
-
-
-## Limitations
-- logpeek-server is not meant for historical filtering of ALL the logs. Due to the in memory log storage, it should only ever be used to monitor the log tail.
-The size of this tail is configurable via the `application.buffer_size` key in `config.toml`. The aim should be to store the last 7 days worth of logs.
-- Timestamps in the log entries must contain the offset in respect to UTC (should be the case in the vast majority of loggers).
 
 ## Getting Started
 
@@ -50,7 +44,11 @@ cargo build --release
 The resulting binary can be found under `backend/target/release`.
 
 ### Example setup and usage
-Let's say we have an application that is writing its log files to `logs/example-app/` and the log entries are structured as follows:
+Let's first have logpeek-server generate the default configuration file for us to modify. For this, 
+simply run the application with the desired path to the configuration file as the argument:
+`logpeek-server desired/path/to/config.toml`. Alternatively, you can also find the template under `/backend` in the repo.
+
+For a concrete example, let's say we have an application that is writing its log files to `logs/example-app/` and the log entries are structured as follows:
 
 ```
 INFO at 2024-01-17T13:55:36.713756700+02:00 from example-app::main - This is an INFO message!
@@ -74,11 +72,12 @@ secret = "my_ultra_secret_password"
 max_login_attempts = 5
 ```
 
-Now we can start the server by simply running the executable. It expects `config.toml` to be in the same directory as the binary.
+Now we can start the server by simply running the executable and specifying the path to the configuration file:
+`logpeek-server path/to/config.toml`. The path can be omitted if the configuration file is named `config.toml` and is in the same directory as the binary.
 
 ### Configuration
 
-The recommended way of configuring logpeek-server is via `config.toml` (template can be found under `/backend` in the repo), which needs to be placed in the same directory as the binary.
+The recommended way of configuring logpeek-server is via a TOML file.
 Environment variables can be used as well, by prefixing them with `LOGPEEK_`.
 
 Environment variables take precedence over the `config.toml` file.

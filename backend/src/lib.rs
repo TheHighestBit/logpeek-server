@@ -1,22 +1,24 @@
 mod routes;
 mod log_reader;
 mod middleware;
+mod config;
 
 use std::collections::HashMap;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
 use serde::Serialize;
 use std::sync::Arc;
 use std::time::SystemTime;
+use ::config::Config;
 use time::OffsetDateTime;
 use axum::Router;
 use axum_server::tls_rustls::RustlsConfig;
-use config::Config;
-use lazy_static::lazy_static;
 use log::{info, LevelFilter};
 use logpeek::config::LoggingMode;
+use once_cell::sync::Lazy;
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, System};
 use tokio::sync::{Mutex, MutexGuard, RwLock};
 use routes::router_setup;
+use crate::config::config_setup;
 
 #[derive(Debug, Serialize, Clone)]
 struct LogEntry {
@@ -41,14 +43,7 @@ struct SharedState {
     login_attempts: Arc<Mutex<u32>>,
 }
 
-// Environment overrides the config file
-lazy_static! {
-    pub static ref SETTINGS: RwLock<Config> = RwLock::new(Config::builder()
-        .add_source(config::File::with_name("config.toml").required(false))
-        .add_source(config::Environment::with_prefix("LOGPEEK").separator("_"))
-        .build()
-        .expect("There is an issue with the configuration file"));
-}
+static SETTINGS: Lazy<RwLock<Config>> = config_setup();
 
 pub async fn run() {
     // Logger setup
