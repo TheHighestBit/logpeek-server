@@ -28,7 +28,7 @@ pub async fn router_setup(shared_state: SharedState<>) -> Router {
         .route("/api/application_list", get(application_list_handler))
         .with_state(shared_state.clone());
 
-    if !SETTINGS.read().await.get_string("main.secret").unwrap_or_else(|_| "".to_string()).is_empty() {
+    if !SETTINGS.get_string("main.secret").unwrap_or_else(|_| "".to_string()).is_empty() {
         info!("Authentication enabled");
         router = router.layer(from_fn_with_state(shared_state, middleware::authentication_middleware));
     }

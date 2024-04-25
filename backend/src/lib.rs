@@ -43,17 +43,17 @@ struct SharedState {
     login_attempts: Arc<Mutex<u32>>,
 }
 
-static SETTINGS: Lazy<RwLock<Config>> = config_setup();
+static SETTINGS: Lazy<Config> = config_setup();
 
 pub async fn run() {
     // Logger setup
     let logger_config = logpeek::config::Config {
-        min_log_level: match SETTINGS.read().await.get_bool("main.logger.enable_debug").unwrap_or(false) {
+        min_log_level: match SETTINGS.get_bool("main.logger.enable_debug").unwrap_or(false) {
             true => LevelFilter::Debug,
             false => LevelFilter::Info
         },
-        out_dir_name: logpeek::config::OutputDirName::Custom(SETTINGS.read().await.get_string("main.logger.log_path").unwrap_or_else(|_| "logpeek-logs".to_string())),
-        logging_mode: match SETTINGS.read().await.get_bool("main.logger.log_to_file").unwrap_or(true) {
+        out_dir_name: logpeek::config::OutputDirName::Custom(SETTINGS.get_string("main.logger.log_path").unwrap_or_else(|_| "logpeek-logs".to_string())),
+        logging_mode: match SETTINGS.get_bool("main.logger.log_to_file").unwrap_or(true) {
             true => LoggingMode::FileAndConsole,
             false => LoggingMode::Console
         },
@@ -93,14 +93,14 @@ pub async fn run() {
         login_attempts: Arc::new(Mutex::new(0)),
     };
 
-    let host_address = SETTINGS.read().await.get_string("main.address").unwrap_or_else(|_| "127.0.0.1:3001".to_string());
+    let host_address = SETTINGS.get_string("main.address").unwrap_or_else(|_| "127.0.0.1:3001".to_string());
 
     let app: Router = router_setup(shared_state).await;
 
-    if SETTINGS.read().await.get_bool("https.enabled").unwrap_or(false) {
+    if SETTINGS.get_bool("https.enabled").unwrap_or(false) {
         let tls_config = RustlsConfig::from_pem_file(
-            SETTINGS.read().await.get_string("https.cert").expect("Failed to read https.cert"),
-            SETTINGS.read().await.get_string("https.key").expect("Failed to read https.key"),
+            SETTINGS.get_string("https.cert").expect("Failed to read https.cert"),
+            SETTINGS.get_string("https.key").expect("Failed to read https.key"),
         ).await.expect("Failed to create TLS config! Most likely there is an issue with the certificate or key file.");
 
         info!("Listening on https://{}", &host_address);

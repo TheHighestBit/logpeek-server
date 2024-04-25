@@ -2,9 +2,8 @@ use std::fs::File;
 use std::io::Write;
 use config::Config;
 use once_cell::sync::Lazy;
-use tokio::sync::RwLock;
 
-pub const fn config_setup() -> Lazy<RwLock<Config>> {
+pub const fn config_setup() -> Lazy<Config> {
     Lazy::new(|| {
         let args: Vec<String> = std::env::args().collect();
 
@@ -27,11 +26,11 @@ pub const fn config_setup() -> Lazy<RwLock<Config>> {
             file.write_all(DEFAULT_CONFIG.as_bytes()).expect("Failed to write default config");
         }
 
-        RwLock::new(Config::builder()
+        Config::builder()
             .add_source(config::File::with_name(&path).required(false))
             .add_source(config::Environment::with_prefix("LOGPEEK").separator("_"))
             .build()
-            .expect("There is an issue with the configuration file"))
+            .expect("There is an issue with the configuration file")
     })
 }
 

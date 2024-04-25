@@ -36,7 +36,7 @@ pub async fn load_logs(buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntr
     let mut i_to_app = i_to_app.lock().await;
     let mut app_i;
 
-    let apps = SETTINGS.read().await.get_array("application").unwrap_or_else(|_| vec![Value::new(None, create_default_map())]);
+    let apps = SETTINGS.get_array("application").unwrap_or_else(|_| vec![Value::new(None, create_default_map())]);
     
     for app in apps {
         let app_table = app.into_table().expect("Config file is formatted incorrectly!");

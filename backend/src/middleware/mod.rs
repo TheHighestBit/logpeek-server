@@ -13,7 +13,7 @@ use crate::log_reader::load_logs;
 
 pub async fn authentication_middleware(State(shared_state): State<SharedState>, req: Request<Body>, next: Next) -> Result<Response, StatusCode> {
     let mut login_attempts = shared_state.login_attempts.lock().await;
-    let max_login_attempts = SETTINGS.read().await.get_int("main.max_login_attempts").unwrap_or(3) as u32;
+    let max_login_attempts = SETTINGS.get_int("main.max_login_attempts").unwrap_or(3) as u32;
     
     if *login_attempts >= max_login_attempts {
         warn!("Server locked due to too many failed login attempts. Manual restart required.");
@@ -37,7 +37,7 @@ pub async fn authentication_middleware(State(shared_state): State<SharedState>, 
             let decoded_string = String::from_utf8(decoded_credentials).map_err(|_| StatusCode::BAD_REQUEST)?;
             let auth_parts: Vec<&str> = decoded_string.splitn(2, ':').collect();
 
-            if SETTINGS.read().await.get_string("main.secret").expect("Failed to read main.secret") == auth_parts[1] {
+            if SETTINGS.get_string("main.secret").expect("Failed to read main.secret") == auth_parts[1] {
                 debug!("User authenticated successfully");
                 Ok(next.run(req).await)
             } else {
@@ -58,7 +58,7 @@ pub async fn authentication_middleware(State(shared_state): State<SharedState>, 
 
 pub async fn buffer_refresh_middleware(State(shared_state): State<SharedState>, req: Request, next: Next) -> Result<Response, StatusCode> {
     let mut last_buffer_update = shared_state.last_buffer_update.lock().await;
-    let update_cooldown = Duration::from_secs(SETTINGS.read().await.get_int("main.buffer_update_cooldown").unwrap_or(10) as u64);
+    let update_cooldown = Duration::from_secs(SETTINGS.get_int("main.buffer_update_cooldown").unwrap_or(10) as u64);
 
     // force-refresh header is only set by the force refresh button in the frontend
     if req.headers().contains_key("force-refresh") || last_buffer_update.elapsed().unwrap_or_else(|_| Duration::from_secs(15)) > update_cooldown {
