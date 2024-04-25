@@ -30,7 +30,7 @@ You can find pre-built binaries for Linux, Windows and macOS on the [releases pa
 [releases page]: https://github.com/TheHighestBit/logpeek-server/releases
 ### Building from source
 Requirements (earlier versions will most likely work fine as well):
-- Rust (tested with 1.76.0)
+- Rust (tested with 1.77.2)
 - Node.js (tested with 21.5.0)
 
 ```
