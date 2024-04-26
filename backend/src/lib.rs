@@ -57,6 +57,7 @@ pub async fn run() {
             true => LoggingMode::FileAndConsole,
             false => LoggingMode::Console
         },
+        use_term_color: logpeek::config::UseTermColor::False,
         ..Default::default() };
     logpeek::init(logger_config).unwrap();
 
