@@ -65,18 +65,6 @@ log_to_file = true
 log_path = "logpeek-logs"
 
 
-# HTTPS is supported, altough a reverse proxy will almost always offer more options.
-[https]
-# When true, the server will try to use HTTPS
-enabled = false
-
-# The path to the certificate file, must be in PEM format and unencrypted
-cert = "path/to/cert.pem"
-
-# The path to the key file, must be in PEM format and unencrypted
-key = "path/to/key.pem"
-
-
 # List of applications whose log files will be monitored. Each application must have a path, a respective parser, the timeformat and optional buffer_size.
 [[application]]
 # Path to the application's log folder or a single logfile. The path can be relative to the server executable or an absolute path. Nested subfolders are supported.
