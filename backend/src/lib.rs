@@ -11,7 +11,6 @@ use std::time::SystemTime;
 use ::config::Config;
 use time::OffsetDateTime;
 use axum::Router;
-use axum_server::tls_rustls::RustlsConfig;
 use log::{info, LevelFilter};
 use logpeek::config::LoggingMode;
 use once_cell::sync::Lazy;
@@ -81,6 +80,7 @@ pub async fn run() {
     log_reader::load_logs(log_buffer.clone(), cache.clone(), i_to_app.clone(), sys.clone(), true).await;
     let loaded_count = log_buffer.read().await.iter().map(|(_, buffer)| buffer.len()).sum::<usize>();
     info!("Loaded {} log entries for {} applications in {:?}", loaded_count, log_buffer.read().await.len(), load_start.elapsed().unwrap());
+    print!("\n\n");
 
     let shared_state = SharedState {
         log_buffer,
@@ -98,25 +98,11 @@ pub async fn run() {
 
     let app: Router = router_setup(shared_state).await;
 
-    if SETTINGS.get_bool("https.enabled").unwrap_or(false) {
-        let tls_config = RustlsConfig::from_pem_file(
-            SETTINGS.get_string("https.cert").expect("Failed to read https.cert"),
-            SETTINGS.get_string("https.key").expect("Failed to read https.key"),
-        ).await.expect("Failed to create TLS config! Most likely there is an issue with the certificate or key file.");
+    let listener = tokio::net::TcpListener::bind(&host_address).await.unwrap();
 
-        info!("Listening on https://{}", &host_address);
-
-        axum_server::bind_rustls(host_address.parse().unwrap(), tls_config)
-            .serve(app.into_make_service())
-            .await
-            .unwrap();
-    } else {
-        info!("Listening on http://{}", &host_address);
-        axum_server::bind(host_address.parse().unwrap())
-            .serve(app.into_make_service())
-            .await
-            .unwrap();
-    }
+    print!("\n\n");
+    info!("Listening on http://{}", &host_address);
+    axum::serve(listener, app).await.unwrap();
 }
 
 pub fn convert_app_to_i(apps: &[String], i_to_app: &MutexGuard<HashMap<usize, String>>) -> Vec<usize> {
