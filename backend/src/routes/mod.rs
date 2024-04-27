@@ -33,6 +33,7 @@ pub async fn router_setup(shared_state: SharedState<>) -> Router {
 
     let static_router = MemoryServe::new(load_assets!("src/dist"))
         .index_file(Some("/index.html"))
+        .fallback(Some("/index.html"))
         .into_router();
 
     router = router.merge(static_router);
