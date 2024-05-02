@@ -11,7 +11,7 @@ axum = "0.7.3"
 config = { version = "0.14.0", features = ["toml"] }
 glob = "0.3.1"
 log = { version = "0.4.20", features = ["serde"] }
-logpeek = "0.1.0"
+logpeek = "0.2.1"
 mime_guess = "2.0.4"
 regex = "1.10.2"
 ringbuffer = "0.15.0"
@@ -23,4 +23,4 @@ tokio = { version = "1.35.1", features = ["macros", "rt-multi-thread", "signal"]
 base64 = "0.21.7"
 axum-extra = { version = "0.9.2", features = ["query"] }
 once_cell = "1.19.0"
-memory-serve = "0.4.4"
+memory-serve = "0.4.5"

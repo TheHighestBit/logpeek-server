@@ -15,6 +15,7 @@ use log::{info, LevelFilter};
 use logpeek::config::LoggingMode;
 use once_cell::sync::Lazy;
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, System};
+use tokio::signal;
 use tokio::sync::{Mutex, MutexGuard, RwLock};
 use routes::router_setup;
 use crate::config::config_setup;
@@ -56,7 +57,7 @@ pub async fn run() {
             true => LoggingMode::FileAndConsole,
             false => LoggingMode::Console
         },
-        use_term_color: logpeek::config::UseTermColor::False,
+        target_filter: Some(vec!["memory_serve"]),
         ..Default::default() };
     logpeek::init(logger_config).unwrap();
 
@@ -80,7 +81,6 @@ pub async fn run() {
     log_reader::load_logs(log_buffer.clone(), cache.clone(), i_to_app.clone(), sys.clone(), true).await;
     let loaded_count = log_buffer.read().await.iter().map(|(_, buffer)| buffer.len()).sum::<usize>();
     info!("Loaded {} log entries for {} applications in {:?}", loaded_count, log_buffer.read().await.len(), load_start.elapsed().unwrap());
-    print!("\n\n");
 
     let shared_state = SharedState {
         log_buffer,
@@ -99,10 +99,13 @@ pub async fn run() {
     let app: Router = router_setup(shared_state).await;
 
     let listener = tokio::net::TcpListener::bind(&host_address).await.unwrap();
-
-    print!("\n\n");
+    
     info!("Listening on http://{}", &host_address);
-    axum::serve(listener, app).await.unwrap();
+    
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_handler()) // Axum's docs say to also add a timeout layer for this but that would require adding tower as a dependency. It seems to be fine anyway...
+        .await
+        .unwrap();
 }
 
 pub fn convert_app_to_i(apps: &[String], i_to_app: &MutexGuard<HashMap<usize, String>>) -> Vec<usize> {
@@ -171,4 +174,31 @@ impl<'a> Iterator for LogBufferIterator<'a> {
         
         latest_entry
     }
+}
+
+// Straight from axum examples
+async fn shutdown_handler() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+        let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+
+    println!("Exiting...");
 }
