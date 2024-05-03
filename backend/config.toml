@@ -13,7 +13,7 @@ address = "127.0.0.1:3001"
 # The maximum number of login attempts before the server is locked. Cleared by manual server restart.
 max_login_attempts = 3
 
-# Minimum amount of time between log buffer updates. Triggered by ANY request to the server.
+# Minimum amount of time in seconds between log buffer updates. Triggered by ANY request to the server.
 # Force-refresh button in the frontend bypasses this.
 buffer_update_cooldown = 10
 
@@ -34,6 +34,9 @@ log_path = "logpeek-logs"
 # Path to the application's log folder or a single logfile. The path can be relative to the server executable or an absolute path. Nested subfolders are supported.
 # Make sure that this path is both accessible and does not contain any other files besides log files. The file extension doesn't matter.
 path = "logpeek-logs"
+
+# The name of the application. If omitted, the path will be used as the name instead.
+name = "logpeek-server"
 
 # The regular expression used to parse the logs files of this application.
 # All 4 possible named capture groups are present in the example below. Only the message capture group is required.

@@ -48,12 +48,17 @@ pub async fn load_logs(buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntr
             .into_string()
             .expect("Path is not a string!");
         
-        if !i_to_app.values().any(|app_name| app_name == &app_path) {
+        let app_name = app_table
+            .get("name")
+            .map(|name| name.clone().into_string().expect("Name is not a string!"))
+            .unwrap_or_else(|| app_path.clone());
+        
+        if !i_to_app.values().any(|stored_app_name| stored_app_name == &app_name) {
             let length = i_to_app.len();
             app_i = length;
-            i_to_app.insert(length, app_path.clone());
+            i_to_app.insert(length, app_name.clone());
         } else {
-            app_i = *i_to_app.iter().find(|(_, app_name)| app_name == &&app_path).unwrap().0;
+            app_i = *i_to_app.iter().find(|(_, stored_app_name)| stored_app_name == &&app_name).unwrap().0;
         }
 
         let app_parser = Regex::new(&app_table
