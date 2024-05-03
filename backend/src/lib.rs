@@ -108,19 +108,9 @@ pub async fn run() {
         .unwrap();
 }
 
-pub fn convert_app_to_i(apps: &[String], i_to_app: &MutexGuard<HashMap<usize, String>>) -> Vec<usize> {
-    let mut applications = Vec::new();
-
+pub fn convert_app_to_i(app: &str, i_to_app: &MutexGuard<HashMap<usize, String>>) -> Option<usize> {
     // Application paths are stored in a hashmap that maps an index to the path. Before filtering, we need to convert back to index representation.
-    if !apps.is_empty() {
-        for app in apps.iter() {
-            if let Some(i) = i_to_app.iter().find(|(_, app_path)| **app_path == *app).map(|(i, _)| i) {
-                applications.push(*i);
-            }
-        }
-    }
-    
-    applications
+    i_to_app.iter().find(|(_, stored_app_name)| **stored_app_name == app).map(|(i, _)| i).copied()
 }
 
 // This iterator yields the most recent log entry across all the buffers
@@ -129,9 +119,9 @@ struct LogBufferIterator<'a> {
 }
 
 impl<'a> LogBufferIterator<'a> {
-    fn new(buffer_map: &'a HashMap<usize, AllocRingBuffer<LogEntry>>, app_filter: &[usize]) -> Self {
+    fn new(buffer_map: &'a HashMap<usize, AllocRingBuffer<LogEntry>>, app_filter: Option<usize>) -> Self {
         let buffers = buffer_map.iter()
-            .filter(|entry| app_filter.is_empty() || app_filter.contains(entry.0))
+            .filter(|entry| app_filter.is_none() || app_filter.unwrap() == *entry.0)
             .map(|entry| (entry.1, -1)).collect();
 
         LogBufferIterator {

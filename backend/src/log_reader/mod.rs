@@ -1,6 +1,5 @@
 mod parser;
 
-
 use ringbuffer::{AllocRingBuffer, RingBuffer};
 use time::format_description::{self, FormatItem};
 use std::fs::File;

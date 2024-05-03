@@ -4,8 +4,7 @@ use anyhow::Result;
 use log::{error, trace};
 use serde::{Deserialize, Deserializer, de, Serialize};
 use axum::Json;
-use axum::extract::State;
-use axum_extra::extract::Query;
+use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use time::OffsetDateTime;
 
@@ -26,7 +25,7 @@ pub struct Params {
     start_timestamp: Option<String>,
     #[serde(default, deserialize_with = "empty_string_as_none")]
     end_timestamp: Option<String>,
-    applications: Option<Vec<String>>,
+    application: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -63,7 +62,7 @@ impl LogFilter {
             message,
             start_timestamp,
             end_timestamp,
-            applications: _,
+            application: _,
         } = params;
 
         let index = (page - 1) * items_per_page;
@@ -141,10 +140,10 @@ pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state)
     trace!("Request received {:?}", &params);
 
     let i_to_app = shared_state.i_to_app.lock().await;
-    let applications = if let Some(param_applications) = &params.applications {
-        convert_app_to_i(param_applications, &i_to_app)
+    let application = if let Some(param_application) = &params.application {
+        convert_app_to_i(param_application, &i_to_app)
     } else {
-        Vec::new()
+        None
     };
 
     let log_filter_result = LogFilter::new(params).await;
@@ -152,7 +151,7 @@ pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state)
     match log_filter_result {
         Ok(log_filter) => {
             let log_buffer_map = shared_state.log_buffer.read().await;
-            let buffer_iterator = LogBufferIterator::new(&log_buffer_map, &applications);
+            let buffer_iterator = LogBufferIterator::new(&log_buffer_map, application);
             
             let mut result: Vec<LogEntryWithApplication> = Vec::new();
             let mut skipped: usize = 0;

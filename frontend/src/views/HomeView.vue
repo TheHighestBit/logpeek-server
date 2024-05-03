@@ -4,7 +4,7 @@
       <SystemInfo></SystemInfo>
     </v-row>
     <v-row>
-      <ApplicationSelect class="ml-3" v-model:application="selected_apps" @update:application="refresh_dashboard"></ApplicationSelect>
+      <ApplicationSelect class="ml-3" v-model:application="selected_app" @update:application="refresh_dashboard"></ApplicationSelect>
     </v-row>
     <v-row>
       <v-col cols="5">
@@ -45,14 +45,14 @@ import ErrorCountByModule from "@/components/ErrorCountByModule.vue";
 import ApplicationSelect from "@/components/ApplicationSelect.vue";
 
 const store = useAppStore();
-const selected_apps = ref<string[]>(
-  JSON.parse(sessionStorage.getItem("selected_apps") || "[]")
+const selected_app = ref<string | undefined>(
+  sessionStorage.getItem("selected_app") || undefined
 );
 
 const construct_search_params = () => {
-  if (selected_apps.value.length > 0) {
+  if (selected_app.value) {
     const search_params = new URLSearchParams();
-    selected_apps.value.forEach((app) => search_params.append("applications", app));
+    search_params.append("application", selected_app.value);
 
     return search_params;
   } else {
@@ -116,7 +116,7 @@ const config = ref<VueUi3dBarConfig>({
 });
 
 const refresh_dashboard = async () => {
-  if (selected_apps.value.length > 0) {
+  if (selected_app.value) {
     dashboard_info.value = await fetchWithAuth("/api/dashboard_info?" + construct_search_params()).then((res) => res.json())
       .catch(() => {
         store.showSnackbar("Failed to fetch dashboard info", "error");
@@ -128,7 +128,7 @@ const refresh_dashboard = async () => {
       });
   }
 
-  sessionStorage.setItem("selected_apps", JSON.stringify(selected_apps.value));
+  sessionStorage.setItem("selected_app", selected_app.value || "");
 
   dataset.value = {
     percentage: dashboard_info.value.log_buffer_usage,

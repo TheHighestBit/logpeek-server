@@ -6,7 +6,6 @@
     @update:model-value="emit('update:application', $event)"
     background-color="primary"
     variant="outlined"
-    multiple
   >
     <v-btn
       v-for="app in application_list"
@@ -25,11 +24,7 @@ import {useAppStore} from "@/store/app";
 const store = useAppStore();
 
 const props = defineProps({
-  application: {
-    type: Array,
-    required: true,
-    default: () => [],
-  }
+  application: String,
 });
 
 const application_list: string[] = await fetchWithAuth("/api/application_list").then((res) => res.json())

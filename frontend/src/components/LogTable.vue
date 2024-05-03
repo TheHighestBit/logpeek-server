@@ -1,5 +1,5 @@
 <template>
-  <ApplicationSelect class="mb-2" v-model:application="selected_apps" @update:application="refresh_table"></ApplicationSelect>
+  <ApplicationSelect class="mb-2" v-model:application="selected_app" @update:application="refresh_table"></ApplicationSelect>
   <v-card height="94vh" border>
     <v-row class="flex-wrap pt-2 mb-n5">
       <v-col sm="5" lg="2" class="ml-2">
@@ -91,8 +91,8 @@ const message_filter = ref<string>();
 const message_history = ref<string[]>([]);
 const module_filter = ref<string>();
 const module_history = ref<string[]>([]);
-const selected_apps = ref<string[]>(
-  JSON.parse(sessionStorage.getItem("selected_apps") || "[]")
+const selected_app = ref<string | undefined>(
+  sessionStorage.getItem("selected_app") || undefined
 );
 
 const loading = ref(true);
@@ -192,10 +192,11 @@ const load = async ({page, itemsPerPage}: { page: number, itemsPerPage: number }
     search_params.append("module_name", module_filter.value);
   }
 
-  if (selected_apps.value.length > 0) {
-    sessionStorage.setItem("selected_apps", JSON.stringify(selected_apps.value));
-    selected_apps.value.forEach((app) => search_params.append("applications", app));
+  if (selected_app.value) {
+    search_params.append("application", selected_app.value);
   }
+
+  sessionStorage.setItem("selected_app", selected_app.value || "");
 
   const response: LogTableResponse = await fetchWithAuth("/api/log_table?" + search_params)
     .then((res) => res.json())

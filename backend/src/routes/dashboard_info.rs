@@ -1,8 +1,7 @@
-use std::collections::{BTreeMap};
+use std::collections::HashMap;
 
-use axum::extract::State;
+use axum::extract::{Query, State};
 use axum::Json;
-use axum_extra::extract::Query;
 use log::{debug, trace};
 use ringbuffer::{RingBuffer};
 use serde::{Deserialize, Serialize};
@@ -12,7 +11,7 @@ use crate::{convert_app_to_i, LogBufferIterator, SharedState};
 
 #[derive(Debug, Deserialize)]
 pub struct Params {
-    applications: Option<Vec<String>>,
+    application: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -32,13 +31,13 @@ pub struct DashboardResponse {
 pub async fn dashboard_info_handler(Query(params): Query<Params>, State(shared_state): State<SharedState>) -> Json<DashboardResponse> {
     trace!("Request received {:?}", params);
 
-    let applications = if let Some(param_applications) = &params.applications {
-        convert_app_to_i(param_applications, &shared_state.i_to_app.lock().await)
+    let application = if let Some(param_application) = &params.application {
+        convert_app_to_i(param_application, &shared_state.i_to_app.lock().await)
     } else {
-        Vec::new()
+        None
     };
 
-    debug!("Applications filter after conversion: {:?}", applications);
+    debug!("Application filter after conversion: {:?}", application);
 
     let current_time = OffsetDateTime::now_utc();
     let mut total_logs_24: [u32; 24] = [0; 24];
@@ -47,12 +46,12 @@ pub async fn dashboard_info_handler(Query(params): Query<Params>, State(shared_s
     let mut total_logs_week: [u32; 7] = [0; 7];
     let mut error_logs_week: [u32; 7] = [0; 7];
     let mut warning_logs_week: [u32; 7] = [0; 7];
-    let mut module_counter_tree: BTreeMap<String, u32> = BTreeMap::new();
+    let mut module_counter_tree: HashMap<String, u32> = HashMap::new();
     let mut top_modules_24: Vec<(String, f32)> = Vec::new();
     let mut flag_24 = false;
 
     let log_buffer_map = shared_state.log_buffer.read().await;
-    let buffer_iterator = LogBufferIterator::new(&log_buffer_map, &applications);
+    let buffer_iterator = LogBufferIterator::new(&log_buffer_map, application);
     
     for entry in buffer_iterator.take_while(|entry| entry.timestamp >= current_time - time::Duration::days(7)) {
         if entry.timestamp > current_time - time::Duration::hours(24) {
@@ -65,7 +64,6 @@ pub async fn dashboard_info_handler(Query(params): Query<Params>, State(shared_s
 
             total_logs_24[hour] += 1;
         } else if !flag_24 {
-            // Only need the top 5 most common modules
             let mut module_count: Vec<(String, u32)> = module_counter_tree
                 .iter()
                 .map(|(module, count)| (module.clone(), *count))
@@ -115,7 +113,7 @@ pub async fn dashboard_info_handler(Query(params): Query<Params>, State(shared_s
     let mut total_capacity = 0;
 
     log_buffer_map.iter()
-        .filter(|entry| applications.is_empty() || applications.contains(entry.0))
+        .filter(|entry| application.is_none() || application.unwrap() == *entry.0)
         .for_each(|entry| {
             total_length += entry.1.len();
             total_capacity += entry.1.capacity();
