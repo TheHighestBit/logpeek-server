@@ -49,7 +49,7 @@ address = "127.0.0.1:3001"
 # The maximum number of login attempts before the server is locked. Cleared by manual server restart.
 max_login_attempts = 3
 
-# Minimum amount of time between log buffer updates. Triggered by ANY request to the server.
+# Minimum amount of time in seconds between log buffer updates. Triggered by ANY request to the server.
 # Force-refresh button in the frontend bypasses this.
 buffer_update_cooldown = 10
 
@@ -61,8 +61,11 @@ enable_debug = false
 # Whether to write log files
 log_to_file = true
 
-# When log_to_file is true, logs will be written to this directory
+# When log_to_file is true, logs will be written to this directory.
 log_path = "logpeek-logs"
+
+#The name of the log file. When this is not set, a new log file will be created upon each server start.
+log_file_name = "logpeek-server.log"
 
 
 # List of applications whose log files will be monitored. Each application must have a path, a respective parser, the timeformat and optional buffer_size.
@@ -89,5 +92,4 @@ timeformat = "iso8601"
 buffer_size = 1_000_000
 
 # There is no limit to the amount of applications that can be monitored at once.
-# Simply add another [[application]] section with the same fields as above.
-"#;
+# Simply add another [[application]] section with the same fields as above."#;

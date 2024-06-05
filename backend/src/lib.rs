@@ -53,6 +53,11 @@ pub async fn run() {
             false => LevelFilter::Info
         },
         out_dir_name: logpeek::config::OutputDirName::Custom(SETTINGS.get_string("main.logger.log_path").unwrap_or_else(|_| "logpeek-logs".to_string())),
+        out_file_name: if SETTINGS.get_string("main.logger.log_file_name").is_ok() {
+            logpeek::config::OutputFileName::Custom(SETTINGS.get_string("main.logger.log_file_name").unwrap())
+        } else {
+            logpeek::config::OutputFileName::AutoGenerate
+        },
         logging_mode: match SETTINGS.get_bool("main.logger.log_to_file").unwrap_or(true) {
             true => LoggingMode::FileAndConsole,
             false => LoggingMode::Console
