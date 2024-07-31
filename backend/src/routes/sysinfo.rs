@@ -43,7 +43,7 @@ pub async fn sysinfo_handler(State(shared_state): State<SharedState>) -> (Status
 
         memory_usage = format!("{:.2}", system.used_memory() as f32 / (1024 * 1024 * 1024) as f32);
         total_memory = format!("{:.2}", system.total_memory() as f32 / (1024 * 1024 * 1024) as f32);
-        cpu_usage = format!("{:.2}", system.global_cpu_info().cpu_usage());
+        cpu_usage = format!("{:.2}", system.global_cpu_usage());
         uptime = Duration::seconds(System::uptime() as i64);
     }
 

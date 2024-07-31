@@ -17,7 +17,7 @@ pub async fn authentication_middleware(State(shared_state): State<SharedState>, 
     
     if *login_attempts >= max_login_attempts {
         warn!("Server locked due to too many failed login attempts. Manual restart required.");
-        return Err(StatusCode::UNAUTHORIZED);
+        return Err(StatusCode::TOO_MANY_REQUESTS);
     }
     
     let auth_header = req.headers().get(header::AUTHORIZATION).and_then(|val| val.to_str().ok());
@@ -39,6 +39,8 @@ pub async fn authentication_middleware(State(shared_state): State<SharedState>, 
 
             if SETTINGS.get_string("main.secret").expect("Failed to read main.secret") == auth_parts[1] {
                 debug!("User authenticated successfully");
+                *login_attempts = 0;
+                
                 Ok(next.run(req).await)
             } else {
                 *login_attempts += 1;
@@ -52,7 +54,7 @@ pub async fn authentication_middleware(State(shared_state): State<SharedState>, 
         }
     } else {
         error!("Missing authorization header");
-        Err(StatusCode::UNAUTHORIZED)
+        Err(StatusCode::BAD_REQUEST)
     }
 }
 

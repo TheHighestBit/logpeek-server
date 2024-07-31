@@ -27,11 +27,19 @@ const validate_password = async () => {
   localStorage.setItem("secret", password.value);
   const response = await fetchWithAuth("api/authenticate", false);
 
-  if (response.status !== 200) {
-    errorMessage.value = "Invalid password";
-    password.value = "";
-  } else {
-    window.location.href = "/";
+  switch (response.status) {
+    case 401:
+      errorMessage.value = "Invalid password";
+      password.value = "";
+      break;
+    case 400:
+      errorMessage.value = "Server error (400)";
+      break;
+    case 429:
+      errorMessage.value = "Too many login attempts! The server has been locked and requires a manual restart.";
+      break;
+    default:
+      window.location.href = "/";
   }
 };
 
