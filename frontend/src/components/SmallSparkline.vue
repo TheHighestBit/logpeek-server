@@ -7,14 +7,8 @@
 </template> `
 
 <script lang="ts" setup>
-import { computed } from "vue";
-import { PropType } from "vue";
-import { ref } from "vue";
-import { VueUiSparkline } from "vue-data-ui";
-import {
-  type VueUiSparklineConfig,
-  type VueUiSparklineDatasetItem,
-} from "vue-data-ui";
+import {computed, PropType, ref} from "vue";
+import {VueUiSparkline, type VueUiSparklineConfig, type VueUiSparklineDatasetItem} from "vue-data-ui";
 import router from "@/router";
 
 const props = defineProps({
@@ -30,9 +24,9 @@ const config = ref<VueUiSparklineConfig>({
   style: {
     backgroundColor: "#242424",
     fontFamily: "inherit",
-    bar: { borderRadius: 3, color: props.bar_color },
-    zeroLine: { color: "#505050", strokeWidth: 1 },
-    plot: { show: true, radius: 4, stroke: "#FFFFFF", strokeWidth: 1 },
+    bar: {borderRadius: 3, color: props.bar_color},
+    zeroLine: {color: "#505050", strokeWidth: 1},
+    plot: {show: true, radius: 4, stroke: "#FFFFFF", strokeWidth: 1},
     verticalIndicator: {
       show: false,
       strokeWidth: 1.5,
@@ -55,13 +49,13 @@ const config = ref<VueUiSparklineConfig>({
       bold: true,
       text: props.sparkbar_title,
     },
-    area: { show: true, useGradient: true, opacity: 30, color: "#5f8bee" },
+    area: {show: true, useGradient: true, opacity: 30, color: "#5f8bee"},
   },
 });
 
 const dataset = computed(() => {
   if (props.data) {
-    const dataset: VueUiSparklineDatasetItem[] = [];
+    const dataset = [];
     const currentDate = new Date();
 
     if (!props.is_week) {
@@ -81,21 +75,31 @@ const dataset = computed(() => {
       return dataset;
     } else {
       for (let i = props.data.length - 1; i >= 2; i--) {
+        const date = new Date(currentDate);
+        date.setUTCDate(currentDate.getUTCDate() - i);
+        const displayDate = date.toISOString().split('T')[0];
+
         dataset.push({
-          period: `${i} days ago`,
+          period: displayDate,
           value: props.data[i],
         });
       }
 
+      const yesterday = new Date(currentDate);
+      yesterday.setUTCDate(currentDate.getUTCDate() - 1);
+      const displayYesterday = yesterday.toISOString().split('T')[0];
+
       dataset.push({
-        period: "Yesterday",
+        period: "Yesterday, " + displayYesterday,
         value: props.data[1],
       });
 
+      const displayToday = currentDate.toISOString().split('T')[0];
+
       dataset.push({
-        period: "Today",
+        period: "Today, " + displayToday,
         value: props.data[0],
-      })
+      });
 
       return dataset;
     }
@@ -104,13 +108,20 @@ const dataset = computed(() => {
   return [];
 });
 
-function selectDatapoint({ index }: {datapoint: VueUiSparklineDatasetItem; index: number;}) {
+
+function selectDatapoint({index}: { datapoint: VueUiSparklineDatasetItem; index: number; }) {
   let dateStart = new Date();
   let dateEnd = new Date();
 
   if (props.is_week) {
-    dateStart.setDate(dateStart.getDate() - (7 - index));
-    dateEnd.setDate(dateEnd.getDate() - (6 - index));
+    dateStart.setDate(dateStart.getDate() - (6 - index));
+    dateStart.setHours(0, 0, 0, 0);
+    dateEnd.setDate(dateEnd.getDate() - (5 - index));
+    dateEnd.setHours(0, 0, 0, 0);
+
+    if (dateEnd > new Date()) {
+      dateEnd = new Date();
+    }
   } else {
     dateStart.setHours(dateStart.getHours() - (24 - index));
     dateEnd.setHours(dateEnd.getHours() - (23 - index));

@@ -1,11 +1,13 @@
+use std::cmp::min;
 use std::collections::HashMap;
+use std::ops::Add;
 
 use axum::extract::{Query, State};
 use axum::Json;
 use log::{debug, trace};
 use ringbuffer::RingBuffer;
 use serde::{Deserialize, Serialize};
-use time::OffsetDateTime;
+use time::{Duration, OffsetDateTime, Time};
 
 use crate::{convert_app_to_i, LogBufferIterator, SharedState};
 
@@ -43,6 +45,10 @@ pub async fn dashboard_info_handler(
     debug!("Application filter after conversion: {:?}", application);
 
     let current_time = OffsetDateTime::now_utc();
+    let start_of_tomorrow = current_time
+        .replace_time(Time::MIDNIGHT)
+        .add(Duration::days(1));
+
     let mut total_logs_24: [u32; 24] = [0; 24];
     let mut error_logs_24: [u32; 24] = [0; 24];
     let mut warning_logs_24: [u32; 24] = [0; 24];
@@ -56,10 +62,10 @@ pub async fn dashboard_info_handler(
     let log_buffer_map = shared_state.log_buffer.read().await;
     let buffer_iterator = LogBufferIterator::new(&log_buffer_map, application);
 
-    for entry in buffer_iterator
-        .take_while(|entry| entry.timestamp >= current_time - time::Duration::days(7))
+    for entry in
+        buffer_iterator.take_while(|entry| entry.timestamp >= start_of_tomorrow - Duration::days(7))
     {
-        if entry.timestamp > current_time - time::Duration::hours(24) {
+        if entry.timestamp > current_time - Duration::hours(24) {
             let hour: usize = (current_time - entry.timestamp).whole_hours() as usize;
             match entry.level {
                 log::Level::Error => error_logs_24[hour] += 1,
@@ -91,7 +97,7 @@ pub async fn dashboard_info_handler(
             flag_24 = true;
         }
 
-        let day: usize = (current_time - entry.timestamp).whole_days() as usize;
+        let day: usize = min((current_time - entry.timestamp).whole_days() as usize, 6);
         match entry.level {
             log::Level::Error => {
                 error_logs_week[day] += 1;
