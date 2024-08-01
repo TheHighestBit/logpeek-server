@@ -1,7 +1,8 @@
-use crate::SharedState;
 use axum::extract::State;
 use axum::Json;
 use log::trace;
+
+use crate::SharedState;
 
 pub async fn application_list_handler(
     State(shared_state): State<SharedState>,

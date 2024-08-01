@@ -1,23 +1,24 @@
-mod parser;
+use std::collections::HashMap;
+use std::fs::File;
+use std::fs::metadata;
+use std::io::{BufRead, BufReader};
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Duration;
 
 use config::{Value, ValueKind};
 use glob::glob;
 use log::{debug, error, trace, warn};
 use regex::Regex;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
-use std::collections::HashMap;
-use std::fs::metadata;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
-use std::sync::Arc;
-use std::time::Duration;
 use sysinfo::System;
 use time::format_description::{self, FormatItem};
+use tokio::sync::{Mutex, RwLock};
 
 use crate::LogEntry;
 use crate::SETTINGS;
-use tokio::sync::{Mutex, RwLock};
+
+mod parser;
 
 pub enum TimeFormat<'a> {
     Iso8601,
@@ -146,11 +147,11 @@ pub async fn load_logs(
             let available_memory = get_available_memory(&mut sys);
 
             if available_memory < memory_required {
-                panic!("{} MB is required to allocate an application's buffer, which is more than the currently available memory of {} MB!", 
-                       memory_required / 1_048_576, available_memory / 1_048_576);
+                panic!("{} MB is required to allocate buffer for {}, which is more than the currently available memory of {} MB!",
+                       memory_required / 1_048_576, &app_path, available_memory / 1_048_576);
             } else if available_memory < memory_required * 2 {
-                warn!("{} MB is required to allocate an application's buffer, which is more than half of the currently available memory! \
-                Consider reducing the buffer sizes to avoid runtime out-of-memory issues.", memory_required / 1_048_576);
+                warn!("{} MB is required to allocate buffer for {}, which is more than half of the currently available memory! \
+                Consider reducing the buffer sizes to avoid runtime out-of-memory issues.", memory_required / 1_048_576, &app_path);
             } else {
                 debug!("{} MB is required for application {}", memory_required / 1_048_576, &app_path);
             }
@@ -310,5 +311,5 @@ fn get_available_memory(sysinfo: &mut System) -> u64 {
 }
 
 fn get_memory_required<T>(buffer_size: u64) -> u64 {
-    buffer_size * std::mem::size_of::<T>() as u64
+    buffer_size * size_of::<T>() as u64
 }
