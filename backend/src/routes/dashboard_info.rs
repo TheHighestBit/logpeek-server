@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use axum::extract::{Query, State};
 use axum::Json;
 use log::{debug, trace};
-use ringbuffer::{RingBuffer};
+use ringbuffer::RingBuffer;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
@@ -28,7 +28,10 @@ pub struct DashboardResponse {
     total_log_entries: u32,
 }
 
-pub async fn dashboard_info_handler(Query(params): Query<Params>, State(shared_state): State<SharedState>) -> Json<DashboardResponse> {
+pub async fn dashboard_info_handler(
+    Query(params): Query<Params>,
+    State(shared_state): State<SharedState>,
+) -> Json<DashboardResponse> {
     trace!("Request received {:?}", params);
 
     let application = if let Some(param_application) = &params.application {
@@ -52,8 +55,10 @@ pub async fn dashboard_info_handler(Query(params): Query<Params>, State(shared_s
 
     let log_buffer_map = shared_state.log_buffer.read().await;
     let buffer_iterator = LogBufferIterator::new(&log_buffer_map, application);
-    
-    for entry in buffer_iterator.take_while(|entry| entry.timestamp >= current_time - time::Duration::days(7)) {
+
+    for entry in buffer_iterator
+        .take_while(|entry| entry.timestamp >= current_time - time::Duration::days(7))
+    {
         if entry.timestamp > current_time - time::Duration::hours(24) {
             let hour: usize = (current_time - entry.timestamp).whole_hours() as usize;
             match entry.level {
@@ -72,8 +77,15 @@ pub async fn dashboard_info_handler(Query(params): Query<Params>, State(shared_s
             module_count.sort_by(|a, b| b.1.cmp(&a.1));
 
             let total_24_errors = error_logs_24.iter().sum::<u32>();
-            top_modules_24 = module_count.iter().take(5)
-                .map(|(module, count)| (module.clone(), *count as f32 * 100.0 / total_24_errors as f32))
+            top_modules_24 = module_count
+                .iter()
+                .take(5)
+                .map(|(module, count)| {
+                    (
+                        module.clone(),
+                        *count as f32 * 100.0 / total_24_errors as f32,
+                    )
+                })
                 .collect();
 
             flag_24 = true;
@@ -84,7 +96,7 @@ pub async fn dashboard_info_handler(Query(params): Query<Params>, State(shared_s
             log::Level::Error => {
                 error_logs_week[day] += 1;
                 *module_counter_tree.entry(entry.module.clone()).or_insert(0) += 1;
-            },
+            }
             log::Level::Warn => warning_logs_week[day] += 1,
             _ => {}
         }
@@ -100,19 +112,22 @@ pub async fn dashboard_info_handler(Query(params): Query<Params>, State(shared_s
     module_count.sort_by(|a, b| b.1.cmp(&a.1));
 
     let total_week_errors = error_logs_week.iter().sum::<u32>();
-    let top_modules_week: Vec<(String, f32)> = module_count.into_iter().take(5)
+    let top_modules_week: Vec<(String, f32)> = module_count
+        .into_iter()
+        .take(5)
         .map(|(module, count)| (module, count as f32 * 100.0 / total_week_errors as f32))
         .collect();
-    
+
     // Special case when all logs are from past 24h
     if !flag_24 {
         top_modules_24 = top_modules_week.clone();
     }
-    
+
     let mut total_length = 0;
     let mut total_capacity = 0;
 
-    log_buffer_map.iter()
+    log_buffer_map
+        .iter()
         .filter(|entry| application.is_none() || application.unwrap() == *entry.0)
         .for_each(|entry| {
             total_length += entry.1.len();

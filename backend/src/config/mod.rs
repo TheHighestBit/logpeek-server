@@ -1,7 +1,7 @@
-use std::fs::File;
-use std::io::Write;
 use config::Config;
 use once_cell::sync::Lazy;
+use std::fs::File;
+use std::io::Write;
 
 pub const fn config_setup() -> Lazy<Config> {
     Lazy::new(|| {
@@ -12,7 +12,7 @@ pub const fn config_setup() -> Lazy<Config> {
         } else {
             "config.toml".to_string()
         };
-        
+
         if let Ok(md) = std::fs::metadata(&path) {
             if !md.is_file() {
                 panic!("Config path is not a file! If you are trying to generate a new file, make sure to specify the desired path to the file, not to the directory.");
@@ -23,7 +23,8 @@ pub const fn config_setup() -> Lazy<Config> {
             // Logger is not initialized yet, so we can't use log macros
             println!("No config file found, creating default config {}", path);
 
-            file.write_all(DEFAULT_CONFIG.as_bytes()).expect("Failed to write default config");
+            file.write_all(DEFAULT_CONFIG.as_bytes())
+                .expect("Failed to write default config");
         }
 
         Config::builder()

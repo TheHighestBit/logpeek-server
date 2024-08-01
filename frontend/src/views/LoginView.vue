@@ -1,8 +1,10 @@
 <template>
   <div class="login-container">
     <div class="login-form">
-      <v-text-field v-model="password" type="password" label="Password"></v-text-field>
-      <v-btn type="button" @click="validate_password">Submit</v-btn>
+      <v-row>
+        <v-text-field v-model="password" type="password" label="Password"></v-text-field>
+        <v-btn type="button" @click="validate_password" class="ml-4 mt-3">Submit</v-btn>
+      </v-row>
       <div class="error-message" v-if="errorMessage">{{ errorMessage }}</div> </div>
   </div>
 </template>
@@ -19,6 +21,7 @@ onMounted(() => {
   window.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       validate_password();
+      
     }
   });
 })

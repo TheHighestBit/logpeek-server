@@ -1,13 +1,12 @@
-use std::{str::FromStr, fmt};
+use std::{fmt, str::FromStr};
 
 use anyhow::Result;
-use log::{error, trace};
-use serde::{Deserialize, Deserializer, de, Serialize};
-use axum::Json;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
+use axum::Json;
+use log::{error, trace};
+use serde::{de, Deserialize, Deserializer, Serialize};
 use time::OffsetDateTime;
-
 
 use crate::{convert_app_to_i, LogBufferIterator, LogEntry, SharedState};
 
@@ -67,24 +66,41 @@ impl LogFilter {
 
         let index = (page - 1) * items_per_page;
 
-        let module_name = module_name.as_ref().map(|module_name| {
-            regex::Regex::new(module_name)
-        }).transpose()?;
+        let module_name = module_name
+            .as_ref()
+            .map(|module_name| regex::Regex::new(module_name))
+            .transpose()?;
 
-        let message = message.as_ref().map(|message| {
-            regex::Regex::new(message)
-        }).transpose()?;
+        let message = message
+            .as_ref()
+            .map(|message| regex::Regex::new(message))
+            .transpose()?;
 
-        let start_timestamp = start_timestamp.as_ref().map(|start_timestamp| {
-            OffsetDateTime::parse(start_timestamp, &time::format_description::well_known::Iso8601::DEFAULT)
-        }).transpose()?;
+        let start_timestamp = start_timestamp
+            .as_ref()
+            .map(|start_timestamp| {
+                OffsetDateTime::parse(
+                    start_timestamp,
+                    &time::format_description::well_known::Iso8601::DEFAULT,
+                )
+            })
+            .transpose()?;
 
-        let end_timestamp = end_timestamp.as_ref().map(|end_timestamp| {
-            OffsetDateTime::parse(end_timestamp, &time::format_description::well_known::Iso8601::DEFAULT)
-        }).transpose()?;
-        
+        let end_timestamp = end_timestamp
+            .as_ref()
+            .map(|end_timestamp| {
+                OffsetDateTime::parse(
+                    end_timestamp,
+                    &time::format_description::well_known::Iso8601::DEFAULT,
+                )
+            })
+            .transpose()?;
+
         // All possible entries will match the filter
-        let is_passtrough = module_name.is_none() && message.is_none() && start_timestamp.is_none() && end_timestamp.is_none();
+        let is_passtrough = module_name.is_none()
+            && message.is_none()
+            && start_timestamp.is_none()
+            && end_timestamp.is_none();
 
         Ok(Self {
             index,
@@ -101,7 +117,7 @@ impl LogFilter {
         if self.is_passtrough {
             return true;
         }
-        
+
         if let Some(min_log_level) = self.min_log_level {
             if entry.level > min_log_level {
                 return false;
@@ -136,7 +152,10 @@ impl LogFilter {
     }
 }
 
-pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state): State<SharedState>) -> (StatusCode, Json<LogTableResponse>) {
+pub async fn log_table_handler(
+    Query(params): Query<Params>,
+    State(shared_state): State<SharedState>,
+) -> (StatusCode, Json<LogTableResponse>) {
     trace!("Request received {:?}", &params);
 
     let i_to_app = shared_state.i_to_app.lock().await;
@@ -152,7 +171,7 @@ pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state)
         Ok(log_filter) => {
             let log_buffer_map = shared_state.log_buffer.read().await;
             let buffer_iterator = LogBufferIterator::new(&log_buffer_map, application);
-            
+
             let mut result: Vec<LogEntryWithApplication> = Vec::new();
             let mut skipped: usize = 0;
             let mut taken: usize = 0;
@@ -174,21 +193,27 @@ pub async fn log_table_handler(Query(params): Query<Params>, State(shared_state)
                 }
             }
 
-            (StatusCode::OK, Json({
-                LogTableResponse {
-                    total_items,
-                    logs: result,
-                }
-            }))
-        },
+            (
+                StatusCode::OK,
+                Json({
+                    LogTableResponse {
+                        total_items,
+                        logs: result,
+                    }
+                }),
+            )
+        }
         Err(err) => {
             error!("Error parsing log filter: {}", err);
-            (StatusCode::BAD_REQUEST, Json({
-                LogTableResponse {
-                    total_items: 0,
-                    logs: vec![],
-                }
-            }))
+            (
+                StatusCode::BAD_REQUEST,
+                Json({
+                    LogTableResponse {
+                        total_items: 0,
+                        logs: vec![],
+                    }
+                }),
+            )
         }
     }
 }

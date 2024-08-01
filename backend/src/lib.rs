@@ -1,24 +1,24 @@
-mod routes;
+mod config;
 mod log_reader;
 mod middleware;
-mod config;
+mod routes;
 
-use std::collections::HashMap;
-use ringbuffer::{AllocRingBuffer, RingBuffer};
-use serde::Serialize;
-use std::sync::Arc;
-use std::time::SystemTime;
+use crate::config::config_setup;
 use ::config::Config;
-use time::OffsetDateTime;
 use axum::Router;
 use log::{info, LevelFilter};
 use logpeek::config::LoggingMode;
 use once_cell::sync::Lazy;
+use ringbuffer::{AllocRingBuffer, RingBuffer};
+use routes::router_setup;
+use serde::Serialize;
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::SystemTime;
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, System};
+use time::OffsetDateTime;
 use tokio::signal;
 use tokio::sync::{Mutex, MutexGuard, RwLock};
-use routes::router_setup;
-use crate::config::config_setup;
 
 #[derive(Debug, Serialize, Clone)]
 struct LogEntry {
@@ -48,22 +48,32 @@ static SETTINGS: Lazy<Config> = config_setup();
 pub async fn run() {
     // Logger setup
     let logger_config = logpeek::config::Config {
-        min_log_level: match SETTINGS.get_bool("main.logger.enable_debug").unwrap_or(false) {
+        min_log_level: match SETTINGS
+            .get_bool("main.logger.enable_debug")
+            .unwrap_or(false)
+        {
             true => LevelFilter::Debug,
-            false => LevelFilter::Info
+            false => LevelFilter::Info,
         },
-        out_dir_name: logpeek::config::OutputDirName::Custom(SETTINGS.get_string("main.logger.log_path").unwrap_or_else(|_| "logpeek-logs".to_string())),
+        out_dir_name: logpeek::config::OutputDirName::Custom(
+            SETTINGS
+                .get_string("main.logger.log_path")
+                .unwrap_or_else(|_| "logpeek-logs".to_string()),
+        ),
         out_file_name: if SETTINGS.get_string("main.logger.log_file_name").is_ok() {
-            logpeek::config::OutputFileName::Custom(SETTINGS.get_string("main.logger.log_file_name").unwrap())
+            logpeek::config::OutputFileName::Custom(
+                SETTINGS.get_string("main.logger.log_file_name").unwrap(),
+            )
         } else {
             logpeek::config::OutputFileName::AutoGenerate
         },
         logging_mode: match SETTINGS.get_bool("main.logger.log_to_file").unwrap_or(true) {
             true => LoggingMode::FileAndConsole,
-            false => LoggingMode::Console
+            false => LoggingMode::Console,
         },
         target_filter: Some(vec!["memory_serve"]),
-        ..Default::default() };
+        ..Default::default()
+    };
     logpeek::init(logger_config).unwrap();
 
     info!("Starting...");
@@ -77,15 +87,32 @@ pub async fn run() {
     let sys = Arc::new(Mutex::new(System::new_with_specifics(
         sysinfo::RefreshKind::new()
             .with_cpu(CpuRefreshKind::new().with_cpu_usage())
-            .with_memory(MemoryRefreshKind::new().with_ram())
+            .with_memory(MemoryRefreshKind::new().with_ram()),
     )));
     let os = System::long_os_version().unwrap_or_default();
     let host_name = System::host_name().unwrap_or_default();
-    
+
     let load_start = SystemTime::now();
-    log_reader::load_logs(log_buffer.clone(), cache.clone(), i_to_app.clone(), sys.clone(), true).await;
-    let loaded_count = log_buffer.read().await.iter().map(|(_, buffer)| buffer.len()).sum::<usize>();
-    info!("Loaded {} log entries for {} applications in {:?}", loaded_count, log_buffer.read().await.len(), load_start.elapsed().unwrap());
+    log_reader::load_logs(
+        log_buffer.clone(),
+        cache.clone(),
+        i_to_app.clone(),
+        sys.clone(),
+        true,
+    )
+    .await;
+    let loaded_count = log_buffer
+        .read()
+        .await
+        .iter()
+        .map(|(_, buffer)| buffer.len())
+        .sum::<usize>();
+    info!(
+        "Loaded {} log entries for {} applications in {:?}",
+        loaded_count,
+        log_buffer.read().await.len(),
+        load_start.elapsed().unwrap()
+    );
 
     let shared_state = SharedState {
         log_buffer,
@@ -99,14 +126,16 @@ pub async fn run() {
         login_attempts: Arc::new(Mutex::new(0)),
     };
 
-    let host_address = SETTINGS.get_string("main.address").unwrap_or_else(|_| "127.0.0.1:3001".to_string());
+    let host_address = SETTINGS
+        .get_string("main.address")
+        .unwrap_or_else(|_| "127.0.0.1:3001".to_string());
 
     let app: Router = router_setup(shared_state).await;
 
     let listener = tokio::net::TcpListener::bind(&host_address).await.unwrap();
-    
+
     info!("Listening on http://{}", &host_address);
-    
+
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_handler()) // Axum's docs say to also add a timeout layer for this but that would require adding tower as a dependency. It seems to be fine anyway...
         .await
@@ -115,7 +144,11 @@ pub async fn run() {
 
 pub fn convert_app_to_i(app: &str, i_to_app: &MutexGuard<HashMap<usize, String>>) -> Option<usize> {
     // Application paths are stored in a hashmap that maps an index to the path. Before filtering, we need to convert back to index representation.
-    i_to_app.iter().find(|(_, stored_app_name)| **stored_app_name == app).map(|(i, _)| i).copied()
+    i_to_app
+        .iter()
+        .find(|(_, stored_app_name)| **stored_app_name == app)
+        .map(|(i, _)| i)
+        .copied()
 }
 
 // This iterator yields the most recent log entry across all the buffers
@@ -124,14 +157,17 @@ struct LogBufferIterator<'a> {
 }
 
 impl<'a> LogBufferIterator<'a> {
-    fn new(buffer_map: &'a HashMap<usize, AllocRingBuffer<LogEntry>>, app_filter: Option<usize>) -> Self {
-        let buffers = buffer_map.iter()
+    fn new(
+        buffer_map: &'a HashMap<usize, AllocRingBuffer<LogEntry>>,
+        app_filter: Option<usize>,
+    ) -> Self {
+        let buffers = buffer_map
+            .iter()
             .filter(|entry| app_filter.is_none() || app_filter.unwrap() == *entry.0)
-            .map(|entry| (entry.1, -1)).collect();
+            .map(|entry| (entry.1, -1))
+            .collect();
 
-        LogBufferIterator {
-            buffers
-        }
+        LogBufferIterator { buffers }
     }
 }
 
@@ -144,7 +180,8 @@ impl<'a> Iterator for LogBufferIterator<'a> {
         let mut index: Option<usize> = None;
 
         for (i, buffer) in self.buffers.iter().enumerate() {
-            if let Some(entry) = buffer.0.get_signed(buffer.1) { // -1 is the most recent entry, -2 is the second most recent, etc.
+            if let Some(entry) = buffer.0.get_signed(buffer.1) {
+                // -1 is the most recent entry, -2 is the second most recent, etc.
                 if let Some(current_latest) = latest_time {
                     if entry.timestamp > *current_latest {
                         latest_time = Some(&entry.timestamp);
@@ -161,12 +198,12 @@ impl<'a> Iterator for LogBufferIterator<'a> {
 
         if let Some(i) = index {
             self.buffers[i].1 -= 1;
-            
+
             if self.buffers[i].1 < -(self.buffers[i].0.len() as isize) {
                 self.buffers.remove(i);
             }
         }
-        
+
         latest_entry
     }
 }
@@ -180,7 +217,7 @@ async fn shutdown_handler() {
     };
 
     #[cfg(unix)]
-        let terminate = async {
+    let terminate = async {
         signal::unix::signal(signal::unix::SignalKind::terminate())
             .expect("failed to install signal handler")
             .recv()

@@ -1,44 +1,52 @@
 mod parser;
 
-use ringbuffer::{AllocRingBuffer, RingBuffer};
-use time::format_description::{self, FormatItem};
-use std::fs::File;
-use std::collections::HashMap;
-use std::fs::metadata;
-use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
-use log::{debug, error, trace, warn};
-use std::sync::Arc;
-use std::time::Duration;
 use config::{Value, ValueKind};
 use glob::glob;
+use log::{debug, error, trace, warn};
 use regex::Regex;
+use ringbuffer::{AllocRingBuffer, RingBuffer};
+use std::collections::HashMap;
+use std::fs::metadata;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Duration;
 use sysinfo::System;
+use time::format_description::{self, FormatItem};
 
-use tokio::sync::{Mutex, RwLock};
 use crate::LogEntry;
 use crate::SETTINGS;
+use tokio::sync::{Mutex, RwLock};
 
 pub enum TimeFormat<'a> {
     Iso8601,
     Rfc3339,
     Rfc2822,
-    Custom(Vec<FormatItem<'a>>), 
+    Custom(Vec<FormatItem<'a>>),
 }
 
-pub async fn load_logs(buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntry>>>>, cache: Arc<Mutex<HashMap<String,
-    (std::time::SystemTime, usize)>>>, i_to_app: Arc<Mutex<HashMap<usize, String>>>, sysinfo: Arc<Mutex<System>>, is_init: bool) {
-    
+pub async fn load_logs(
+    buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntry>>>>,
+    cache: Arc<Mutex<HashMap<String, (std::time::SystemTime, usize)>>>,
+    i_to_app: Arc<Mutex<HashMap<usize, String>>>,
+    sysinfo: Arc<Mutex<System>>,
+    is_init: bool,
+) {
     let mut log_buffer_map = buffer.write().await;
     let mut log_files = Vec::new();
     let mut cache = cache.lock().await;
     let mut i_to_app = i_to_app.lock().await;
     let mut app_i;
 
-    let apps = SETTINGS.get_array("application").unwrap_or_else(|_| vec![Value::new(None, create_default_map())]);
-    
+    let apps = SETTINGS
+        .get_array("application")
+        .unwrap_or_else(|_| vec![Value::new(None, create_default_map())]);
+
     for app in apps {
-        let app_table = app.into_table().expect("Config file is formatted incorrectly!");
+        let app_table = app
+            .into_table()
+            .expect("Config file is formatted incorrectly!");
 
         let app_path = app_table
             .get("path")
@@ -46,55 +54,74 @@ pub async fn load_logs(buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntr
             .clone()
             .into_string()
             .expect("Path is not a string!");
-        
+
         let app_name = app_table
             .get("name")
             .map(|name| name.clone().into_string().expect("Name is not a string!"))
             .unwrap_or_else(|| app_path.clone());
-        
-        if !i_to_app.values().any(|stored_app_name| stored_app_name == &app_name) {
+
+        if !i_to_app
+            .values()
+            .any(|stored_app_name| stored_app_name == &app_name)
+        {
             let length = i_to_app.len();
             app_i = length;
             i_to_app.insert(length, app_name.clone());
         } else {
-            app_i = *i_to_app.iter().find(|(_, stored_app_name)| stored_app_name == &&app_name).unwrap().0;
+            app_i = *i_to_app
+                .iter()
+                .find(|(_, stored_app_name)| stored_app_name == &&app_name)
+                .unwrap()
+                .0;
         }
 
-        let app_parser = Regex::new(&app_table
-            .get("parser")
-            .expect("An application is missing the parser field in the config!")
-            .clone()
-            .into_string()
-            .expect("Parser is not a string!")).expect("Failed to compile regex!");
+        let app_parser = Regex::new(
+            &app_table
+                .get("parser")
+                .expect("An application is missing the parser field in the config!")
+                .clone()
+                .into_string()
+                .expect("Parser is not a string!"),
+        )
+        .expect("Failed to compile regex!");
 
-
-        let configured_timeformat = if let Some(configured_timeformat) = app_table.get("timeformat") {
+        let configured_timeformat = if let Some(configured_timeformat) = app_table.get("timeformat")
+        {
             configured_timeformat.clone().to_string()
         } else {
             "iso8601".to_string()
         };
-        
 
         let app_timeformat = match configured_timeformat.as_str() {
-        "iso8601" => TimeFormat::Iso8601,
-        "rfc3339" => TimeFormat::Rfc3339,
-        "rfc2822" => TimeFormat::Rfc2822,
-        custom_format_str => {
-            let format_desc = format_description::parse_borrowed::<1>(custom_format_str).expect("Invalid custom time format!");
-            TimeFormat::Custom(format_desc)
-        },
+            "iso8601" => TimeFormat::Iso8601,
+            "rfc3339" => TimeFormat::Rfc3339,
+            "rfc2822" => TimeFormat::Rfc2822,
+            custom_format_str => {
+                let format_desc = format_description::parse_borrowed::<1>(custom_format_str)
+                    .expect("Invalid custom time format!");
+                TimeFormat::Custom(format_desc)
+            }
         };
-        
+
         debug!("Loading logs for application: {}", app_path);
 
-        if metadata(&app_path).expect("Failed to read metadata for log file").is_file() {
-            log_files.push((PathBuf::from(app_path.clone()), get_modified_time(&app_path)));
+        if metadata(&app_path)
+            .expect("Failed to read metadata for log file")
+            .is_file()
+        {
+            log_files.push((
+                PathBuf::from(app_path.clone()),
+                get_modified_time(&app_path),
+            ));
         } else {
-            for log_file in glob(format!("{}/**/*", &app_path).as_str()).expect("Failed to read glob pattern") {
+            for log_file in
+                glob(format!("{}/**/*", &app_path).as_str()).expect("Failed to read glob pattern")
+            {
                 if let Ok(path) = log_file {
                     if let Ok(metadata) = metadata(&path) {
                         if metadata.is_file() {
-                            log_files.push((path.clone(), get_modified_time(path.to_str().unwrap())));
+                            log_files
+                                .push((path.clone(), get_modified_time(path.to_str().unwrap())));
                         }
                     } else {
                         error!("Failed to read log file metadata! {:?}", path);
@@ -130,7 +157,7 @@ pub async fn load_logs(buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntr
 
             AllocRingBuffer::new(app_buffer_size as usize)
         });
-        
+
         log_files.sort_by(|a, b| b.1.cmp(&a.1)); // Newest files first
 
         if is_init {
@@ -146,13 +173,26 @@ pub async fn load_logs(buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntr
                     Some(file) => file,
                     None => break,
                 };
-                
-                debug!("Counting lines in log file: {}", log_file.0.to_str().unwrap());
 
-                let file_line_count = BufReader::new(File::open(log_file.0.clone()).expect("Failed to open file")).lines().count();
-                if total_line_count + file_line_count >= buffer_size { // This is the earliest file we need to read from
-                    // Bump the cache time so that the following retain call will include it 
-                    cache.insert(log_file.0.to_str().unwrap().to_string(), (log_file.1.checked_sub(Duration::from_secs(1)).unwrap(), file_line_count - (buffer_size - total_line_count)));
+                debug!(
+                    "Counting lines in log file: {}",
+                    log_file.0.to_str().unwrap()
+                );
+
+                let file_line_count =
+                    BufReader::new(File::open(log_file.0.clone()).expect("Failed to open file"))
+                        .lines()
+                        .count();
+                if total_line_count + file_line_count >= buffer_size {
+                    // This is the earliest file we need to read from
+                    // Bump the cache time so that the following retain call will include it
+                    cache.insert(
+                        log_file.0.to_str().unwrap().to_string(),
+                        (
+                            log_file.1.checked_sub(Duration::from_secs(1)).unwrap(),
+                            file_line_count - (buffer_size - total_line_count),
+                        ),
+                    );
                     break;
                 } else {
                     total_line_count += file_line_count;
@@ -192,12 +232,17 @@ pub async fn load_logs(buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntr
                             Ok(parse_result) => {
                                 trace!("{:?}", parse_result);
                                 log_buffer.push(parse_result);
-                            },
+                            }
                             Err(err) => {
-                                error!("{} on line {} in file {}", err, i + 1, log_file.0.to_str().unwrap());
+                                error!(
+                                    "{} on line {} in file {}",
+                                    err,
+                                    i + 1,
+                                    log_file.0.to_str().unwrap()
+                                );
                             }
                         }
-                    },
+                    }
                     Err(err) => {
                         error!("{}", err);
                     }
@@ -206,7 +251,10 @@ pub async fn load_logs(buffer: Arc<RwLock<HashMap<usize, AllocRingBuffer<LogEntr
                 line_count = i;
             }
 
-            cache.insert(log_file.0.to_str().unwrap().to_string(), (log_file.1, line_count));
+            cache.insert(
+                log_file.0.to_str().unwrap().to_string(),
+                (log_file.1, line_count),
+            );
         }
 
         log_files.clear();
@@ -222,18 +270,36 @@ fn get_modified_time(path: &str) -> std::time::SystemTime {
         Err(e) => {
             error!("Failed to read metadata for log file! {:?}", e);
             std::time::SystemTime::UNIX_EPOCH
-        },
+        }
     }
 }
 
 fn create_default_map() -> ValueKind {
     warn!("No application configurations found, proceeding with defaults.");
-    
+
     let mut map = HashMap::new();
-    map.insert("path".to_string(), Value::new(None, ValueKind::String("logpeek-logs".to_string())));
-    map.insert("parser".to_string(), Value::new(None, ValueKind::String(r"^(?P<timestamp>\S+) (?P<level>\S+) (?P<module>\S+) - (?P<message>.+)$".to_string())));
-    map.insert("timeformat".to_string(), Value::new(None, ValueKind::String("iso8601".to_string())));
-    map.insert("buffer_size".to_string(), Value::new(None, ValueKind::U64(1_000_000)));
+    map.insert(
+        "path".to_string(),
+        Value::new(None, ValueKind::String("logpeek-logs".to_string())),
+    );
+    map.insert(
+        "parser".to_string(),
+        Value::new(
+            None,
+            ValueKind::String(
+                r"^(?P<timestamp>\S+) (?P<level>\S+) (?P<module>\S+) - (?P<message>.+)$"
+                    .to_string(),
+            ),
+        ),
+    );
+    map.insert(
+        "timeformat".to_string(),
+        Value::new(None, ValueKind::String("iso8601".to_string())),
+    );
+    map.insert(
+        "buffer_size".to_string(),
+        Value::new(None, ValueKind::U64(1_000_000)),
+    );
 
     ValueKind::Table(map)
 }

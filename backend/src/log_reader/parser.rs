@@ -1,12 +1,12 @@
 use std::str::FromStr;
 
-use regex::Regex;
-use anyhow::Result;
-use thiserror::Error;
-use time::OffsetDateTime;
-use time::format_description::well_known::Iso8601;
 use crate::log_reader::TimeFormat;
 use crate::LogEntry;
+use anyhow::Result;
+use regex::Regex;
+use thiserror::Error;
+use time::format_description::well_known::Iso8601;
+use time::OffsetDateTime;
 
 #[derive(Debug, Error)]
 pub enum LogParseError {
@@ -16,14 +16,29 @@ pub enum LogParseError {
     InvalidMessage(String),
 }
 
-pub fn parse_entry(line: &str, parser_re: &Regex, timeformat: &TimeFormat, app_i: usize) -> Result<LogEntry> {
+pub fn parse_entry(
+    line: &str,
+    parser_re: &Regex,
+    timeformat: &TimeFormat,
+    app_i: usize,
+) -> Result<LogEntry> {
     if let Some(caps) = parser_re.captures(line) {
         let timestamp = if let Some(timestamp) = caps.name("timestamp") {
             match timeformat {
-                TimeFormat::Iso8601 => OffsetDateTime::parse(timestamp.as_str(), &Iso8601::DEFAULT)?,
-                TimeFormat::Rfc2822 => OffsetDateTime::parse(timestamp.as_str(), &time::format_description::well_known::Rfc2822)?,
-                TimeFormat::Rfc3339 => OffsetDateTime::parse(timestamp.as_str(), &time::format_description::well_known::Rfc3339)?,
-                TimeFormat::Custom(format_desc) => OffsetDateTime::parse(timestamp.as_str(), &format_desc)?,
+                TimeFormat::Iso8601 => {
+                    OffsetDateTime::parse(timestamp.as_str(), &Iso8601::DEFAULT)?
+                }
+                TimeFormat::Rfc2822 => OffsetDateTime::parse(
+                    timestamp.as_str(),
+                    &time::format_description::well_known::Rfc2822,
+                )?,
+                TimeFormat::Rfc3339 => OffsetDateTime::parse(
+                    timestamp.as_str(),
+                    &time::format_description::well_known::Rfc3339,
+                )?,
+                TimeFormat::Custom(format_desc) => {
+                    OffsetDateTime::parse(timestamp.as_str(), &format_desc)?
+                }
             }
         } else {
             OffsetDateTime::now_utc()
@@ -41,14 +56,17 @@ pub fn parse_entry(line: &str, parser_re: &Regex, timeformat: &TimeFormat, app_i
             "N/A"
         };
 
-        let message = caps.name("message").ok_or_else(|| LogParseError::InvalidMessage(line.to_string()))?.as_str(); // Is required
+        let message = caps
+            .name("message")
+            .ok_or_else(|| LogParseError::InvalidMessage(line.to_string()))?
+            .as_str(); // Is required
 
         Ok(LogEntry {
             timestamp,
             level: log::Level::from_str(level)?,
             module: module.to_string(),
             message: message.to_string(),
-            application: app_i
+            application: app_i,
         })
     } else {
         Err(LogParseError::NoCaptureGroupsFound(line.to_string()).into())
