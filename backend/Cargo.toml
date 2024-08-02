@@ -23,3 +23,7 @@ tokio = { version = "1.39.2", features = ["macros", "rt-multi-thread", "signal"]
 base64 = "0.22.1"
 once_cell = "1.19.0"
 memory-serve = "0.6.0"
+
+[profile.release]
+codegen-units = 1
+lto = true
