@@ -18,7 +18,7 @@ ringbuffer = "0.15.0"
 serde = { version = "1.0.193", features = ["derive"] }
 sysinfo = "0.31.0"
 thiserror = "1.0.56"
-time = { version = "0.3.31", features = ["parsing", "serde"] }
+time = { version = "0.3.36", features = ["parsing", "serde"] }
 tokio = { version = "1.39.2", features = ["macros", "rt-multi-thread", "signal"] }
 base64 = "0.22.1"
 once_cell = "1.19.0"
