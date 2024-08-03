@@ -50,7 +50,7 @@
             </v-col>
           </v-row>
           <ErrorCountByModule :data="dashboard_info.top_modules_24"
-                              card_title="24h errors by module"></ErrorCountByModule>
+                              card_title="Error Breakdown Per Origin"></ErrorCountByModule>
         </v-col>
         <v-col cols="5">
           <v-row class="mb-n4">
@@ -93,7 +93,7 @@
             </v-col>
           </v-row>
           <ErrorCountByModule :data="dashboard_info.top_modules_week"
-                              card_title="7d errors by module"></ErrorCountByModule>
+                              card_title="Error Breakdown Per Origin"></ErrorCountByModule>
         </v-col>
         <v-col>
           <VueUi3dBar :config="config" :dataset="dataset"></VueUi3dBar>

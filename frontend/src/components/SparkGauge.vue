@@ -39,7 +39,7 @@ const config = ref({
       "color": "#1A1A1A",
       "offsetY": 0,
       "bold": true,
-      "rounding": 3,
+      "rounding": 2,
       "prefix": "",
       "suffix": ""
     },
