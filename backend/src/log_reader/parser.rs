@@ -1,12 +1,15 @@
+use std::collections::HashMap;
 use std::str::FromStr;
 
-use crate::log_reader::TimeFormat;
-use crate::LogEntry;
 use anyhow::Result;
+use log::warn;
 use regex::Regex;
 use thiserror::Error;
 use time::format_description::well_known::Iso8601;
 use time::OffsetDateTime;
+
+use crate::log_reader::TimeFormat;
+use crate::LogEntry;
 
 #[derive(Debug, Error)]
 pub enum LogParseError {
@@ -21,6 +24,7 @@ pub fn parse_entry(
     parser_re: &Regex,
     timeformat: &TimeFormat,
     app_i: usize,
+    level_map: &Option<HashMap<String, String>>,
 ) -> Result<LogEntry> {
     if let Some(caps) = parser_re.captures(line) {
         let timestamp = if let Some(timestamp) = caps.name("timestamp") {
@@ -44,11 +48,36 @@ pub fn parse_entry(
             OffsetDateTime::now_utc()
         };
 
-        let level = if let Some(level) = caps.name("level") {
-            level.as_str()
-        } else {
-            "INFO"
-        };
+        let level = caps
+            .name("level")
+            .and_then(|level| {
+                let level_str = level.as_str();
+
+                level_map
+                    .as_ref()
+                    .and_then(|map| map.get(level_str).cloned())
+                    .map(|mapped_level| {
+                        log::Level::from_str(&mapped_level).unwrap_or_else(|_| {
+                            warn!(
+                                "Invalid log level mapping: {}. Using INFO instead",
+                                mapped_level
+                            );
+                            log::Level::Info
+                        })
+                    })
+                    .or_else(|| {
+                        let from_str_result = log::Level::from_str(level_str);
+                        
+                        match from_str_result {
+                            Ok(level) => Some(level),
+                            Err(_) => {
+                                warn!("Invalid log level: {}. Consider adding a mapping for it under the applications level_map field.", level_str);
+                                None
+                            }
+                        }
+                    })
+            })
+            .unwrap_or(log::Level::Info);
 
         let module = if let Some(module) = caps.name("module") {
             module.as_str()
@@ -63,7 +92,7 @@ pub fn parse_entry(
 
         Ok(LogEntry {
             timestamp,
-            level: log::Level::from_str(level)?,
+            level,
             module: module.to_string(),
             message: message.to_string(),
             application: app_i,
