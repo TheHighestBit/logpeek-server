@@ -22,8 +22,8 @@ const config = ref({
     "height": 76,
     "basePosition": 64,
     "animation": {
-      "show": false,
-      "speedMs": "100"
+      "show": true,
+      "speedMs": "50"
     },
     "title": {
       "show": true,
