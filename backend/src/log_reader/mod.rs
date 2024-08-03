@@ -61,6 +61,17 @@ pub async fn load_logs(
             .map(|name| name.clone().into_string().expect("Name is not a string!"))
             .unwrap_or_else(|| app_path.clone());
 
+        let level_map: Option<HashMap<String, String>> = app_table
+            .get("level_map")
+            .and_then(|level_map| level_map.clone().into_table().ok())
+            .map(|table| {
+                table.into_iter()
+                    .filter_map(|(k, v)| {
+                        v.into_string().ok().map(|val| (k, val))
+                    })
+                    .collect()
+            });
+
         if !i_to_app
             .values()
             .any(|stored_app_name| stored_app_name == &app_name)
@@ -229,7 +240,7 @@ pub async fn load_logs(
             for (i, line) in reader.lines().skip(lines_to_skip).enumerate() {
                 match line {
                     Ok(line) => {
-                        match parser::parse_entry(&line, &app_parser, &app_timeformat, app_i) {
+                        match parser::parse_entry(&line, &app_parser, &app_timeformat, app_i, &level_map) {
                             Ok(parse_result) => {
                                 trace!("{:?}", parse_result);
                                 log_buffer.push(parse_result);
