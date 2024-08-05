@@ -1,7 +1,8 @@
-use config::Config;
-use once_cell::sync::Lazy;
 use std::fs::File;
 use std::io::Write;
+
+use config::Config;
+use once_cell::sync::Lazy;
 
 pub const fn config_setup() -> Lazy<Config> {
     Lazy::new(|| {
@@ -91,6 +92,10 @@ timeformat = "iso8601"
 
 # The size of the log buffer that is kept in memory. When the buffer is full, the oldest logs are discarded first.
 buffer_size = 1_000_000
+
+# Allows mapping custom log levels to the standard log levels. Possible values are "ERROR", "WARN", "INFO", "DEBUG" and "TRACE".
+# The keys are case-sensitive!
+#level_map = { "CRITICAL" = "ERROR", "CATASTROPHE" = "error" }
 
 # There is no limit to the amount of applications that can be monitored at once.
 # Simply add another [[application]] section with the same fields as above."#;

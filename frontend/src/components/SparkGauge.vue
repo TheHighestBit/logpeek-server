@@ -1,5 +1,5 @@
 <template>
-  <VueUiSparkgauge :config="config" :dataset="dataset"/>
+  <VueUiSparkgauge :config="config" :dataset="dataset" style="width: 30%"/>
 </template>
 
 <script lang="ts" setup>
@@ -20,7 +20,7 @@ const config = ref({
     "fontFamily": "inherit",
     "background": "#242424",
     "height": 76,
-    "basePosition": 64,
+    "basePosition": 67,
     "animation": {
       "show": true,
       "speedMs": "50"

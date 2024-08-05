@@ -19,36 +19,15 @@
               </v-banner>
             </v-col>
           </v-row>
-          <v-row class="mt-0">
-            <v-col cols="9">
-              <SmallSparkline :bar_color="colors.log_error" :data="dashboard_info.error_logs_24" :is_week="false"
-                              type="error" sparkbar_title="Errors"></SmallSparkline>
-            </v-col>
-            <v-col>
-              <spark-gauge :bar_color="colors.log_error" gauge_title="Errors Per Hour" :is_week="false"
-                           :data="dashboard_info.error_logs_24" :max_value="1"></spark-gauge>
-            </v-col>
-          </v-row>
-          <v-row class="mt-n6">
-            <v-col cols="9">
-              <SmallSparkline :bar_color="colors.log_warning" :data="dashboard_info.warning_logs_24" :is_week="false"
-                              type="warning" sparkbar_title="Warnings"></SmallSparkline>
-            </v-col>
-            <v-col>
-              <spark-gauge :bar_color="colors.log_warning" gauge_title="Warnings Per Hour" :is_week="false"
-                           :data="dashboard_info.warning_logs_24" :max_value="5"></spark-gauge>
-            </v-col>
-          </v-row>
-          <v-row class="mt-n6">
-            <v-col cols="9">
-              <SmallSparkline :bar_color="colors.primary" :data="dashboard_info.total_logs_24" :is_week="false"
-                              type="total" sparkbar_title="All logs"></SmallSparkline>
-            </v-col>
-            <v-col>
-              <spark-gauge :bar_color="colors.primary" gauge_title="Logs Per Hour" :is_week="false"
-                           :data="dashboard_info.total_logs_24" :max_value="50"></spark-gauge>
-            </v-col>
-          </v-row>
+          <DashboardBreakdown :log_data="dashboard_info.error_logs_24" :is_week="false"
+                              bar_title="Errors" gauge_title="Errors Per Day" type="error"
+                              :upper_limit="1"></DashboardBreakdown>
+          <DashboardBreakdown :log_data="dashboard_info.warning_logs_24" :is_week="false"
+                              bar_title="Warnings" gauge_title="Warnings Per Day" type="warning"
+                              :upper_limit="5"></DashboardBreakdown>
+          <DashboardBreakdown :log_data="dashboard_info.total_logs_24" :is_week="false"
+                              bar_title="All logs" gauge_title="Logs Per Day" type="total"
+                              :upper_limit="50"></DashboardBreakdown>
           <ErrorCountByModule :data="dashboard_info.top_modules_24"
                               card_title="Error Breakdown Per Origin"></ErrorCountByModule>
         </v-col>
@@ -62,36 +41,15 @@
               </v-banner>
             </v-col>
           </v-row>
-          <v-row class="mt-0">
-            <v-col cols="9">
-              <SmallSparkline :bar_color="colors.log_error" :data="dashboard_info.error_logs_week" :is_week="true"
-                              type="error" sparkbar_title="Errors"></SmallSparkline>
-            </v-col>
-            <v-col>
-              <spark-gauge :bar_color="colors.log_error" gauge_title="Errors Per Day" :is_week="true"
-                           :data="dashboard_info.error_logs_week" :max_value="5"></spark-gauge>
-            </v-col>
-          </v-row>
-          <v-row class="mt-n6">
-            <v-col cols="9">
-              <SmallSparkline :bar_color="colors.log_warning" :data="dashboard_info.warning_logs_week" :is_week="true"
-                              type="warning" sparkbar_title="Warnings"></SmallSparkline>
-            </v-col>
-            <v-col>
-              <spark-gauge :bar_color="colors.log_warning" gauge_title="Warnings Per Day" :is_week="true"
-                           :data="dashboard_info.warning_logs_week" :max_value="25"></spark-gauge>
-            </v-col>
-          </v-row>
-          <v-row class="mt-n6">
-            <v-col cols="9">
-              <SmallSparkline :bar_color="colors.primary" :data="dashboard_info.total_logs_week" :is_week="true"
-                              type="total" sparkbar_title="All logs"></SmallSparkline>
-            </v-col>
-            <v-col>
-              <spark-gauge :bar_color="colors.primary" gauge_title="Logs Per Day" :is_week="true"
-                           :data="dashboard_info.total_logs_week" :max_value="1000"></spark-gauge>
-            </v-col>
-          </v-row>
+          <DashboardBreakdown :log_data="dashboard_info.error_logs_week" :is_week="true"
+                              bar_title="Errors" gauge_title="Errors Per Day" type="error"
+                              :upper_limit="5"></DashboardBreakdown>
+          <DashboardBreakdown :log_data="dashboard_info.warning_logs_week" :is_week="true"
+                              bar_title="Warnings" gauge_title="Warnings Per Day" type="warning"
+                              :upper_limit="25"></DashboardBreakdown>
+          <DashboardBreakdown :log_data="dashboard_info.total_logs_week" :is_week="true"
+                              bar_title="All logs" gauge_title="Logs Per Day" type="total"
+                              :upper_limit="1000"></DashboardBreakdown>
           <ErrorCountByModule :data="dashboard_info.top_modules_week"
                               card_title="Error Breakdown Per Origin"></ErrorCountByModule>
         </v-col>
@@ -106,7 +64,6 @@
 
 <script lang="ts" setup>
 import {ref} from "vue";
-import SmallSparkline from "@/components/SmallSparkline.vue";
 import "vue-data-ui/style.css";
 import {colors} from "@/styles/colors";
 import {DashboardInfo} from "@/interfaces/DashboardInfo";
@@ -117,7 +74,7 @@ import {fetchWithAuth} from "@/utils";
 import {useAppStore} from "@/store/app";
 import ErrorCountByModule from "@/components/ErrorCountByModule.vue";
 import ApplicationSelect from "@/components/ApplicationSelect.vue";
-import SparkGauge from "@/components/SparkGauge.vue";
+import DashboardBreakdown from "@/components/DashboardBreakdown.vue";
 
 const store = useAppStore();
 const selected_app = ref<string | undefined>(
