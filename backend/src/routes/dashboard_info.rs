@@ -14,6 +14,7 @@ use crate::{convert_app_to_i, LogBufferIterator, SharedState};
 #[derive(Debug, Deserialize)]
 pub struct Params {
     application: Option<String>,
+    utc_offset: i64, // in minutes
 }
 
 #[derive(Serialize)]
@@ -98,7 +99,8 @@ pub async fn dashboard_info_handler(
         }
 
         let day: usize = min(
-            (start_of_tomorrow - entry.timestamp).whole_days() as usize,
+            (start_of_tomorrow - entry.timestamp + Duration::minutes(params.utc_offset))
+                .whole_days() as usize,
             6,
         );
         match entry.level {

@@ -38,7 +38,7 @@ log_file_name = "logpeek-server.log"
 # Make sure that this path is both accessible and does not contain any other files besides log files. The file extension doesn't matter.
 path = "logpeek-logs"
 
-# The name of the application. If omitted, the path will be used as the name instead.
+# The name of the application. If omitted, the path will be used instead.
 name = "logpeek-server"
 
 # The regular expression used to parse the logs files of this application.

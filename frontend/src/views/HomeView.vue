@@ -82,14 +82,14 @@ const selected_app = ref<string | undefined>(
 );
 
 const construct_search_params = () => {
-  if (selected_app.value) {
-    const search_params = new URLSearchParams();
-    search_params.append("application", selected_app.value);
+  const search_params = new URLSearchParams();
+  search_params.append("utc_offset", String(new Date().getTimezoneOffset()));
 
-    return search_params;
-  } else {
-    return "";
+  if (selected_app.value) {
+    search_params.append("application", selected_app.value);
   }
+
+  return search_params;
 }
 
 const dashboard_info = ref<DashboardInfo>(await fetchWithAuth("/api/dashboard_info?" + construct_search_params()).then((res) => res.json())
