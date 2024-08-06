@@ -97,7 +97,10 @@ pub async fn dashboard_info_handler(
             flag_24 = true;
         }
 
-        let day: usize = min((current_time - entry.timestamp).whole_days() as usize, 6);
+        let day: usize = min(
+            (start_of_tomorrow - entry.timestamp).whole_days() as usize,
+            6,
+        );
         match entry.level {
             log::Level::Error => {
                 error_logs_week[day] += 1;

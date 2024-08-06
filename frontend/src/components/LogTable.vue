@@ -1,10 +1,12 @@
 <template>
-  <ApplicationSelect class="mb-2" v-model:application="selected_app" @update:application="refresh_table"></ApplicationSelect>
+  <ApplicationSelect class="mb-2" v-model:application="selected_app"
+                     @update:application="refresh_table"></ApplicationSelect>
   <v-card height="94vh" border>
     <v-row class="flex-wrap pt-2 mb-n5">
       <v-col sm="5" lg="2" class="ml-2">
         <VueDatePicker v-model="date_range_filter" range utc time-picker-inline dark :preset-dates="presetDates"
-        placeholder="Select Timerange" :max-date="new Date()" @update:model-value="refresh_table">
+                       placeholder="Select Timerange" :max-date="new Date()" @update:model-value="refresh_table"
+                       :teleport="true">
           <template #preset-date-range-button="{ label, value, presetDate }">
             <span
               role="button"
@@ -19,7 +21,8 @@
       </v-col>
       <v-col sm="2" md="2" lg="1">
         <v-select v-model="min_log_level_filter" clearable variant="outlined" label="Min log level"
-                  :items="['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR']" density="compact" @update:modelValue="refresh_table"></v-select>
+                  :items="['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR']" density="compact"
+                  @update:modelValue="refresh_table"></v-select>
       </v-col>
       <v-col>
         <v-combobox v-model="module_filter"
@@ -75,7 +78,7 @@ import VueDatePicker from "@vuepic/vue-datepicker";
 import '@vuepic/vue-datepicker/dist/main.css';
 import {LogEntryWithApplication} from "@/interfaces/LogEntry";
 import {LogTableResponse} from "@/interfaces/LogTableResponse";
-import {endOfMonth, startOfMonth, startOfYear, subMonths, subDays} from 'date-fns';
+import {endOfMonth, startOfMonth, startOfYear, subDays, subMonths} from 'date-fns';
 import {fetchWithAuth} from "@/utils";
 import {useAppStore} from "@/store/app";
 import router from "@/router";
@@ -201,8 +204,8 @@ const load = async ({page, itemsPerPage}: { page: number, itemsPerPage: number }
   const response: LogTableResponse = await fetchWithAuth("/api/log_table?" + search_params)
     .then((res) => res.json())
     .catch(() => {
-    store.showSnackbar("Error fetching logs", "error");
-  });
+      store.showSnackbar("Error fetching logs", "error");
+    });
 
   response.logs.map((item: LogEntryWithApplication) => {
     item.entry.index = (page - 1) * itemsPerPage + response.logs.indexOf(item) + 1;
