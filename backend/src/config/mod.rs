@@ -16,7 +16,7 @@ pub const fn config_setup() -> Lazy<Config> {
 
         if let Ok(md) = std::fs::metadata(&path) {
             if !md.is_file() {
-                panic!("Config path is not a file! If you are trying to generate a new file, make sure to specify the desired path to the file, not to the directory.");
+                panic!("Config path is not a file! If you are trying to generate a new config file, make sure to specify the desired path to the file, not to the directory.");
             }
         }
 
@@ -30,7 +30,7 @@ pub const fn config_setup() -> Lazy<Config> {
 
         Config::builder()
             .add_source(config::File::with_name(&path).required(false))
-            .add_source(config::Environment::with_prefix("LOGPEEK").separator("_"))
+            .add_source(config::Environment::with_prefix("LOGPEEK"))
             .build()
             .expect("There is an issue with the configuration file")
     })

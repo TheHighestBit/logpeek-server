@@ -20,13 +20,13 @@
             </v-col>
           </v-row>
           <DashboardBreakdown :log_data="dashboard_info.error_logs_24" :is_week="false"
-                              bar_title="Errors" gauge_title="Errors Per Day" type="error"
+                              bar_title="Errors" gauge_title="Errors Per Hour" type="error"
                               :upper_limit="1"></DashboardBreakdown>
           <DashboardBreakdown :log_data="dashboard_info.warning_logs_24" :is_week="false"
-                              bar_title="Warnings" gauge_title="Warnings Per Day" type="warning"
+                              bar_title="Warnings" gauge_title="Warnings Per Hour" type="warning"
                               :upper_limit="5"></DashboardBreakdown>
           <DashboardBreakdown :log_data="dashboard_info.total_logs_24" :is_week="false"
-                              bar_title="All logs" gauge_title="Logs Per Day" type="total"
+                              bar_title="All logs" gauge_title="Logs Per Hour" type="total"
                               :upper_limit="50"></DashboardBreakdown>
           <ErrorCountByModule :data="dashboard_info.top_modules_24"
                               card_title="Error Breakdown Per Origin"></ErrorCountByModule>
@@ -148,17 +148,10 @@ const config = ref<VueUi3dBarConfig>({
 });
 
 const refresh_dashboard = async () => {
-  if (selected_app.value) {
-    dashboard_info.value = await fetchWithAuth("/api/dashboard_info?" + construct_search_params()).then((res) => res.json())
-      .catch(() => {
-        store.showSnackbar("Failed to fetch dashboard info", "error");
-      });
-  } else {
-    dashboard_info.value = await fetchWithAuth("/api/dashboard_info").then((res) => res.json())
-      .catch(() => {
-        store.showSnackbar("Failed to fetch dashboard info", "error");
-      });
-  }
+  dashboard_info.value = await fetchWithAuth("/api/dashboard_info?" + construct_search_params()).then((res) => res.json())
+    .catch(() => {
+      store.showSnackbar("Failed to fetch dashboard info", "error");
+    });
 
   sessionStorage.setItem("selected_app", selected_app.value || "");
 

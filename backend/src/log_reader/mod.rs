@@ -1,16 +1,16 @@
-use std::collections::HashMap;
-use std::fs::File;
-use std::fs::metadata;
-use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
-use std::sync::Arc;
-use std::time::Duration;
-
 use config::{Value, ValueKind};
 use glob::glob;
 use log::{debug, error, trace, warn};
 use regex::Regex;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
+use std::fs::metadata;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Duration;
 use sysinfo::System;
 use time::format_description::{self, FormatItem};
 use tokio::sync::{Mutex, RwLock};
@@ -65,10 +65,9 @@ pub async fn load_logs(
             .get("level_map")
             .and_then(|level_map| level_map.clone().into_table().ok())
             .map(|table| {
-                table.into_iter()
-                    .filter_map(|(k, v)| {
-                        v.into_string().ok().map(|val| (k, val))
-                    })
+                table
+                    .into_iter()
+                    .filter_map(|(k, v)| v.into_string().ok().map(|val| (k, val)))
                     .collect()
             });
 
@@ -144,31 +143,38 @@ pub async fn load_logs(
             }
         }
 
-        let log_buffer = log_buffer_map.entry(app_i).or_insert({
-            let app_buffer_size = app_table
-                .get("buffer_size")
-                .unwrap_or(&Value::new(None, ValueKind::U64(1_000_000)))
-                .clone()
-                .into_uint()
-                .expect("buffer_size is not parsable to an unsigned integer!");
-            
-            // This memory check is expensive, but it is only done once during initialization
-            let memory_required = get_memory_required::<LogEntry>(app_buffer_size);
-            let mut sys = sysinfo.lock().await;
-            let available_memory = get_available_memory(&mut sys);
+        let log_buffer = match log_buffer_map.entry(app_i) {
+            Entry::Occupied(entry) => entry.into_mut(),
+            Entry::Vacant(entry) => {
+                let app_buffer_size = app_table
+                    .get("buffer_size")
+                    .unwrap_or(&Value::new(None, ValueKind::U64(1_000_000)))
+                    .clone()
+                    .into_uint()
+                    .expect("buffer_size is not parsable to an unsigned integer!");
 
-            if available_memory < memory_required {
-                panic!("{} MB is required to allocate buffer for {}, which is more than the currently available memory of {} MB!",
-                       memory_required / 1_048_576, &app_path, available_memory / 1_048_576);
-            } else if available_memory < memory_required * 2 {
-                warn!("{} MB is required to allocate buffer for {}, which is more than half of the currently available memory! \
-                Consider reducing the buffer sizes to avoid runtime out-of-memory issues.", memory_required / 1_048_576, &app_path);
-            } else {
-                debug!("{} MB is required for application {}", memory_required / 1_048_576, &app_path);
+                // This memory check is expensive, but it is only done once during initialization
+                let memory_required = get_memory_required::<LogEntry>(app_buffer_size);
+                let mut sys = sysinfo.lock().await;
+                let available_memory = get_available_memory(&mut sys);
+
+                if available_memory < memory_required {
+                    panic!("{} MB is required to allocate buffer for {}, which is more than the currently available memory of {} MB!",
+                        memory_required / 1_048_576, &app_path, available_memory / 1_048_576);
+                } else if available_memory < memory_required * 2 {
+                    warn!("{} MB is required to allocate buffer for {}, which is more than half of the currently available memory! \
+                    Consider reducing the buffer sizes to avoid runtime out-of-memory issues.", memory_required / 1_048_576, &app_path);
+                } else {
+                    debug!(
+                        "{} MB is required for application {}",
+                        memory_required / 1_048_576,
+                        &app_path
+                    );
+                }
+
+                entry.insert(AllocRingBuffer::new(app_buffer_size as usize))
             }
-
-            AllocRingBuffer::new(app_buffer_size as usize)
-        });
+        };
 
         log_files.sort_by(|a, b| b.1.cmp(&a.1)); // Newest files first
 
@@ -240,7 +246,13 @@ pub async fn load_logs(
             for (i, line) in reader.lines().skip(lines_to_skip).enumerate() {
                 match line {
                     Ok(line) => {
-                        match parser::parse_entry(&line, &app_parser, &app_timeformat, app_i, &level_map) {
+                        match parser::parse_entry(
+                            &line,
+                            &app_parser,
+                            &app_timeformat,
+                            app_i,
+                            &level_map,
+                        ) {
                             Ok(parse_result) => {
                                 trace!("{:?}", parse_result);
                                 log_buffer.push(parse_result);
