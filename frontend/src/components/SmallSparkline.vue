@@ -77,7 +77,7 @@ const dataset = computed(() => {
       for (let i = props.data.length - 1; i >= 2; i--) {
         const date = new Date(currentDate);
         date.setUTCDate(currentDate.getUTCDate() - i);
-        const displayDate = date.toISOString().split('T')[0];
+        const displayDate = date.toLocaleDateString();
 
         dataset.push({
           period: displayDate,
@@ -87,14 +87,14 @@ const dataset = computed(() => {
 
       const yesterday = new Date(currentDate);
       yesterday.setUTCDate(currentDate.getUTCDate() - 1);
-      const displayYesterday = yesterday.toISOString().split('T')[0];
+      const displayYesterday = yesterday.toLocaleDateString();
 
       dataset.push({
         period: "Yesterday, " + displayYesterday,
         value: props.data[1],
       });
 
-      const displayToday = currentDate.toISOString().split('T')[0];
+      const displayToday = currentDate.toLocaleDateString()
 
       dataset.push({
         period: "Today, " + displayToday,

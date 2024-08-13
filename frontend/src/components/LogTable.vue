@@ -209,7 +209,7 @@ const load = async ({page, itemsPerPage}: { page: number, itemsPerPage: number }
 
   response.logs.map((item: LogEntryWithApplication) => {
     item.entry.index = (page - 1) * itemsPerPage + response.logs.indexOf(item) + 1;
-    item.entry.timestamp = new Date(item.entry.timestamp).toLocaleString('en-GB');
+    item.entry.timestamp = new Date(item.entry.timestamp).toLocaleString('en-US', {hour12: false});
   });
 
   items.value = response.logs
