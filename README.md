@@ -21,10 +21,10 @@ for production use with a high log throughput. As a general rule of thumb, 1 000
 ## Screenshots
 
 *Dashboard view*
-![image](https://github.com/TheHighestBit/logpeek-server/assets/40504459/2ce50a13-f94d-4a48-91e4-aff944bcd025)
+![image](https://github.com/user-attachments/assets/72a2d0f5-84eb-42b4-8097-123370b7d825)
 
 *Log table view*
-![image](https://github.com/TheHighestBit/logpeek-server/assets/40504459/8b21c7c8-61ea-45a5-b557-be567618ceb6)
+![image](https://github.com/user-attachments/assets/f553a661-54fa-442a-8c4e-1ee438c86a11)
 
 ## Getting Started
 
